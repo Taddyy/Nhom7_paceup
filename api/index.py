@@ -99,13 +99,19 @@ if 'app' not in locals():
 # Wrap FastAPI app with Mangum for Vercel serverless
 try:
     from mangum import Mangum
-    handler = Mangum(app, lifespan="off")
+    mangum_handler = Mangum(app, lifespan="off")
     print("✅ Mangum handler created", file=sys.stderr)
 except ImportError:
     # Fallback: export app directly (Vercel may auto-detect)
     print("⚠️ Mangum not available, exporting app directly", file=sys.stderr)
-    handler = app
+    mangum_handler = app
 
-# Export handler for Vercel
-# Vercel will use this handler to process requests
+# Vercel handler function
+# Vercel looks for a function named 'handler' or exports the app directly
+def handler(event, context):
+    """Vercel serverless function handler"""
+    return mangum_handler(event, context)
+
+# Also export app directly for Vercel auto-detection
+# Vercel can auto-detect ASGI apps, but Mangum is more reliable
 
