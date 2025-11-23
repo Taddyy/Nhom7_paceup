@@ -80,7 +80,8 @@ async def health_check_root():
 
 # ============================================================================
 # TEMPORARY ENDPOINTS FOR DATABASE INITIALIZATION
-# TODO: Remove these endpoints after database is initialized
+# NOTE: Keep these endpoints for now as they may be needed for re-initialization
+# Consider removing or securing them in production
 # ============================================================================
 
 @app.get("/api/v1/init-db")
@@ -123,10 +124,11 @@ async def init_database_endpoint():
 @app.post("/api/v1/seed-admin")
 async def seed_admin_endpoint():
     """
-    Create admin user (TEMPORARY - Remove after use)
+    Create admin user (TEMPORARY - Keep for now, may need for re-seeding)
     
     Creates admin user with email: admin@gmail.com, password: admin123
     Only use this once after database initialization.
+    NOTE: Consider securing this endpoint in production or removing it.
     """
     try:
         import uuid
