@@ -6,6 +6,18 @@
   },
   "rewrites": [
     {
+      "source": "/api/test-minimal",
+      "destination": "/api/test-minimal"
+    },
+    {
+      "source": "/api/debug-lambda",
+      "destination": "/api/debug-lambda"
+    },
+    {
+      "source": "/api/debug-asgi",
+      "destination": "/api/debug-asgi"
+    },
+    {
       "source": "/api/debug",
       "destination": "/api/debug"
     },
