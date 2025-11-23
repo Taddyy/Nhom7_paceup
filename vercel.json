@@ -1,8 +1,7 @@
 {
   "functions": {
     "api/index.py": {
-      "includeFiles": "backend/**",
-      "runtime": "python3.12"
+      "includeFiles": "backend/**"
     }
   },
   "rewrites": [
