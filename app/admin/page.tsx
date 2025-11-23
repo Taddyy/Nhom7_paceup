@@ -15,7 +15,7 @@ export default function AdminDashboard() {
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [events, setEvents] = useState<Event[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [toast, setToast] = useState({ message: '', type: 'success' as const, isVisible: false })
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean }>({ message: '', type: 'success', isVisible: false })
 
   useEffect(() => {
     checkAdminAccess()
