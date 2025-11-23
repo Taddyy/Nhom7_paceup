@@ -1,4 +1,4 @@
-import { FALLBACK_EVENT_DETAILS_MAP } from './fallbackEvents'
+import { FALLBACK_EVENT_DETAILS_MAP } from './fallback-events'
 
 export interface TicketOption {
   id: string
