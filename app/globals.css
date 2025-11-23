@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --foreground-rgb: 37, 37, 37;
+  --background-start-rgb: 255, 255, 255;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
+  font-family: 'Inter', sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Figma Design Utilities */
+@layer components {
+  .btn-figma-primary {
+    @apply bg-[#1c1c1c] text-white px-4 py-2 rounded-lg font-medium text-lg uppercase;
+    box-shadow: inset -4px -4px 4px 0px rgba(0,0,0,0.4), inset 4px 4px 6px 0px rgba(255,255,255,0.15);
+  }
+  
+  .btn-figma-secondary {
+    @apply bg-gradient-to-b from-white to-[#dfdfdf] border-[0.5px] border-[rgba(0,0,0,0.12)] px-4 py-2 rounded-lg font-medium text-sm uppercase text-black;
+    box-shadow: inset -3px -3px 3px 0px rgba(0,0,0,0.1), inset 2px 2px 3px 0px rgba(0,0,0,0.1);
+  }
+  
+  .card-figma {
+    @apply bg-white border border-[#cbcbcb] rounded-[24px] p-4;
+    box-shadow: inset -4px -4px 12px 0px rgba(132,132,132,0.25), inset 5px 4px 4px 0px rgba(255,255,255,0.25);
+  }
+}
+
+/* Tiptap Editor Styles */
+.ProseMirror {
+  outline: none;
+}
+
+.ProseMirror p {
+  margin-bottom: 0.75em;
+  line-height: 1.6;
+}
+
+.ProseMirror h1 {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.ProseMirror h2 {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 0.8em;
+  margin-bottom: 0.4em;
+}
+
+.ProseMirror h3 {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-top: 0.6em;
+  margin-bottom: 0.3em;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.ProseMirror li {
+  margin-bottom: 0.25em;
+}
+
+.ProseMirror a {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1em 0;
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid #e5e7eb;
+  padding-left: 1em;
+  font-style: italic;
+  color: #4b5563;
+}
+
+/* Placeholder styles */
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

@@ -1,0 +1,175 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
+import { getCurrentUser } from '@/lib/api/auth'
+
+/**
+ * Header component that mirrors the translucent navigation capsule in Figma.
+ */
+const NAV_ITEMS = [
+  { href: '/', label: 'Trang chủ' },
+  { href: '/events', label: 'Giải chạy' },
+  { href: '/content', label: 'Nội dung' },
+  { href: '/profile', label: 'Cá nhân' }
+]
+
+const LOGO_SRC = '/Icon/logo-header.svg'
+
+const getInitials = (fullName: string) => {
+  if (!fullName) return ''
+  const parts = fullName.trim().split(' ').filter(Boolean)
+  const initials = parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('')
+  return initials || fullName[0]?.toUpperCase() || ''
+}
+
+interface HeaderProps {
+  floating?: boolean
+}
+
+export default function Header({ floating = false }: HeaderProps) {
+  const router = useRouter()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [initials, setInitials] = useState('')
+  const [avatar, setAvatar] = useState<string | null>(null)
+  const [role, setRole] = useState<string>('user')
+
+  useEffect(() => {
+    const syncAuth = async () => {
+      if (typeof window === 'undefined') return
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setIsLoggedIn(false)
+        setInitials('')
+        setAvatar(null)
+        setRole('user')
+        return
+      }
+
+      try {
+        const profile = await getCurrentUser()
+        setIsLoggedIn(true)
+        setInitials(getInitials(profile?.full_name ?? profile?.email ?? ''))
+        setAvatar(profile?.avatar || null)
+        // Force update role from profile or specific email
+        const userRole = (profile?.email === 'admin@gmail.com' || profile?.role === 'admin') ? 'admin' : 'user'
+        setRole(userRole)
+      } catch {
+        setIsLoggedIn(false)
+        setInitials('')
+        setAvatar(null)
+        setRole('user')
+      }
+    }
+
+    syncAuth()
+
+    const handleStorage = () => syncAuth()
+    const handleUserUpdate = () => syncAuth()
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorage)
+      window.addEventListener('user:updated', handleUserUpdate)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', handleStorage)
+        window.removeEventListener('user:updated', handleUserUpdate)
+      }
+    }
+  }, [])
+
+  const handleAvatarClick = () => {
+    if (role === 'admin') {
+      router.push('/admin')
+    } else {
+      router.push('/profile')
+    }
+  }
+
+  const wrapperClasses = floating
+    ? 'pointer-events-none fixed left-0 right-0 top-4 z-50 flex justify-center px-4 sm:left-[73px] sm:right-auto sm:justify-start sm:px-0'
+    : 'relative z-30 flex w-full justify-center px-4 pt-8 pb-2'
+
+  const containerClasses = floating
+    ? 'pointer-events-auto flex items-center gap-5 w-full max-w-[720px]'
+    : 'flex items-center gap-5 w-full max-w-[720px] justify-center md:justify-start'
+
+  return (
+    <header className={wrapperClasses}>
+      <div className={containerClasses}>
+        <Link href="/" className="relative block h-[72px] w-[80px] shrink-0">
+          <Image
+            src={LOGO_SRC}
+            alt="PaceUp logo"
+            fill
+            className="object-contain"
+            priority
+          />
+        </Link>
+
+        <nav className="backdrop-blur-[5px] bg-[#f3f3f3] flex w-full max-w-[561px] items-center gap-4 rounded-[12px] px-[23px] pr-[6px] py-[6px] shadow-[0_12px_32px_rgba(0,0,0,0.08)]">
+          <div className="flex flex-1 flex-wrap items-center gap-4">
+            {NAV_ITEMS.map((item) => {
+              if (!isLoggedIn && item.href === '/profile') return null
+              
+              const isProfile = item.href === '/profile'
+              const isAdmin = role === 'admin'
+              const href = isProfile && isAdmin ? '/admin' : item.href
+              const label = isProfile && isAdmin ? 'Quản lý' : item.label
+
+              return (
+                <Link
+                  key={item.href}
+                  href={href}
+                  className="font-normal text-[#424242] text-base whitespace-nowrap hover:text-[#1c1c1c] transition-colors"
+                >
+                  {label}
+                </Link>
+              )
+            })}
+          </div>
+          {isLoggedIn ? (
+            <button
+              type="button"
+              onClick={handleAvatarClick}
+              className="relative h-[54px] w-[54px] rounded-full bg-white overflow-hidden shadow-[0_6px_12px_rgba(0,0,0,0.15)] flex items-center justify-center text-[#1c1c1c] text-lg font-semibold"
+              aria-label={role === 'admin' ? 'Quản lý' : 'Trang cá nhân'}
+            >
+              {avatar ? (
+                <Image src={avatar} alt="Avatar" fill className="object-cover" />
+              ) : (
+                initials || (
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5Z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    />
+                    <path
+                      d="M4 22c0-3.866 3.134-7 7-7h2c3.866 0 7 3.134 7 7"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )
+              )}
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="ml-auto bg-[#1c1c1c] flex items-center justify-center px-4 py-2 rounded-lg relative shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.4),inset_4px_4px_6px_rgba(255,255,255,0.15)]"
+            >
+              <span className="font-medium text-lg text-white uppercase">
+                Đăng nhập
+              </span>
+            </Link>
+          )}
+        </nav>
+      </div>
+    </header>
+  )
+}
