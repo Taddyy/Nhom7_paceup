@@ -3,57 +3,100 @@ Main FastAPI application entry point
 """
 import logging
 import os
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from app.core.config import settings
-from app.core.database import Base, engine
-from app.api.v1.api import api_router
+import sys
+import traceback
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+# Khai báo app ở module level
+app = None
 
-# Don't create tables on import - use /api/v1/init-db endpoint instead
-# This prevents import errors if database is not ready
-logger.info("Production mode: Tables will be created via /api/v1/init-db endpoint")
+# --- BẮT ĐẦU ĐOẠN CODE BẪY LỖI ---
+try:
+    # Đặt toàn bộ các dòng import của bạn ở đây
+    from fastapi import FastAPI
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.staticfiles import StaticFiles
+    from app.core.config import settings
+    from app.core.database import Base, engine
+    from app.api.v1.api import api_router
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    logger = logging.getLogger(__name__)
+    
+    # Don't create tables on import - use /api/v1/init-db endpoint instead
+    # This prevents import errors if database is not ready
+    logger.info("Production mode: Tables will be created via /api/v1/init-db endpoint")
+    
+    # Khởi tạo app
+    app = FastAPI(
+        title="PaceUp API",
+        description="API for PaceUp running community platform",
+        version="1.0.0",
+    )
+    
+    logger.info("Starting PaceUp API...")
+    
+    # CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-app = FastAPI(
-    title="PaceUp API",
-    description="API for PaceUp running community platform",
-    version="1.0.0",
-)
-
-logger.info("Starting PaceUp API...")
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Serve static files (uploads)
-# Note: Vercel serverless functions have read-only file system
-# Static file serving is handled by Vercel's static file system
-# Only create directory if not in serverless environment
-if not os.getenv("VERCEL"):
+    # Serve static files (uploads)
+    # Note: Vercel serverless functions have read-only file system
+    # Static file serving is handled by Vercel's static file system
+    # Only create directory if not in serverless environment
+    if not os.getenv("VERCEL"):
+        try:
+            os.makedirs("public/uploads", exist_ok=True)
+            app.mount("/uploads", StaticFiles(directory="public/uploads"), name="uploads")
+        except OSError:
+            # Read-only file system (e.g., Vercel serverless)
+            logger.warning("Cannot create uploads directory (read-only file system). Static files will be handled by Vercel.")
+    else:
+        logger.info("Vercel environment detected: skipping local uploads directory creation")
+    
+    # Include API router
+    app.include_router(api_router, prefix="/api/v1")
+    
+except Exception as e:
+    # Nếu có lỗi, in nó ra Console để Vercel ghi lại
+    print("--------------------------------------------------", file=sys.stderr, flush=True)
+    print("CRITICAL ERROR DURING APP MAIN INITIALIZATION:", file=sys.stderr, flush=True)
+    print(str(e), file=sys.stderr, flush=True)
+    traceback.print_exc(file=sys.stderr)  # In chi tiết dòng lỗi
+    print("--------------------------------------------------", file=sys.stderr, flush=True)
+    # Cũng in ra stdout
+    print("--------------------------------------------------", flush=True)
+    print("CRITICAL ERROR DURING APP MAIN INITIALIZATION:", flush=True)
+    print(str(e), flush=True)
+    traceback.print_exc()  # In chi tiết dòng lỗi
+    print("--------------------------------------------------", flush=True)
+    
+    # Đảm bảo logger được khởi tạo để log lỗi
     try:
-        os.makedirs("public/uploads", exist_ok=True)
-        app.mount("/uploads", StaticFiles(directory="public/uploads"), name="uploads")
-    except OSError:
-        # Read-only file system (e.g., Vercel serverless)
-        logger.warning("Cannot create uploads directory (read-only file system). Static files will be handled by Vercel.")
-else:
-    logger.info("Vercel environment detected: skipping local uploads directory creation")
+        logging.basicConfig(
+            level=logging.ERROR,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to initialize app: {e}", exc_info=True)
+    except:
+        pass
+    
+    # Re-raise để api/index.py có thể bắt được
+    raise
+# --- KẾT THÚC ĐOẠN CODE BẪY LỖI ---
 
-# Include API router
-app.include_router(api_router, prefix="/api/v1")
+# Đảm bảo logger được khởi tạo nếu không có lỗi
+if app is not None:
+    logger = logging.getLogger(__name__)
 
 
 @app.get("/")
