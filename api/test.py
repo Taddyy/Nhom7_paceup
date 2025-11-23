@@ -35,12 +35,15 @@ def handler(event, context):
             "body": json.dumps(response)
         }
     except Exception as e:
+        import traceback
         error_response = {
             "status": "error",
             "error": str(e),
             "error_type": type(e).__name__
         }
+        error_trace = traceback.format_exc()
         print(f"ERROR: {error_response}", file=sys.stderr, flush=True)
+        print(f"TRACEBACK:\n{error_trace}", file=sys.stderr, flush=True)
         return {
             "statusCode": 500,
             "headers": {
