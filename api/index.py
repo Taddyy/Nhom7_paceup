@@ -89,15 +89,23 @@ except Exception as e:
     raise
 
 # Vercel handler function
-# Vercel automatically detects ASGI apps when app is exported
+# Use Mangum to wrap FastAPI app for Vercel/Lambda
 print("✅ Function ready to handle requests", file=sys.stderr)
 
-# Export app for Vercel
-# Vercel will automatically wrap this ASGI app with Mangum or similar
 # Make sure app is in scope
 if 'app' not in locals():
     raise RuntimeError("Failed to import app from app.main")
 
-# Export the app - Vercel detects ASGI apps automatically
-__all__ = ['app']
+# Wrap FastAPI app with Mangum for Vercel serverless
+try:
+    from mangum import Mangum
+    handler = Mangum(app, lifespan="off")
+    print("✅ Mangum handler created", file=sys.stderr)
+except ImportError:
+    # Fallback: export app directly (Vercel may auto-detect)
+    print("⚠️ Mangum not available, exporting app directly", file=sys.stderr)
+    handler = app
+
+# Export handler for Vercel
+# Vercel will use this handler to process requests
 
