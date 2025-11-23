@@ -99,6 +99,9 @@ async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
         
         logger.info(f"Login successful for user: {credentials.email}")
         
+        # Convert is_active from string to bool
+        is_active_bool = user.is_active == "true" if user.is_active else False
+        
         return AuthResponse(
             access_token=access_token,
             token_type="bearer",
@@ -106,7 +109,17 @@ async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
                 "id": user.id,
                 "email": user.email,
                 "full_name": user.full_name,
-                "role": user.role  # Include role in response
+                "role": user.role,
+                "is_active": is_active_bool,
+                "created_at": user.created_at if user.created_at else datetime.utcnow(),
+                "updated_at": user.updated_at,
+                "phone": user.phone,
+                "date_of_birth": user.date_of_birth,
+                "gender": user.gender.value if user.gender else None,
+                "address": user.address,
+                "running_experience": user.running_experience.value if user.running_experience else None,
+                "goals": user.goals,
+                "avatar": user.avatar,
             },
         )
     except HTTPException:
@@ -172,16 +185,29 @@ async def register(user_data: RegisterRequest, db: Session = Depends(get_db)):
         data={"sub": new_user.id}, expires_delta=access_token_expires
     )
     
-    return AuthResponse(
-        access_token=access_token,
-        token_type="bearer",
-        user={
-            "id": new_user.id,
-            "email": new_user.email,
-            "full_name": new_user.full_name,
-            "role": new_user.role
-        },
-    )
+        # Convert is_active from string to bool
+        is_active_bool = new_user.is_active == "true" if new_user.is_active else False
+        
+        return AuthResponse(
+            access_token=access_token,
+            token_type="bearer",
+            user={
+                "id": new_user.id,
+                "email": new_user.email,
+                "full_name": new_user.full_name,
+                "role": new_user.role,
+                "is_active": is_active_bool,
+                "created_at": new_user.created_at if new_user.created_at else datetime.utcnow(),
+                "updated_at": new_user.updated_at,
+                "phone": new_user.phone,
+                "date_of_birth": new_user.date_of_birth,
+                "gender": new_user.gender.value if new_user.gender else None,
+                "address": new_user.address,
+                "running_experience": new_user.running_experience.value if new_user.running_experience else None,
+                "goals": new_user.goals,
+                "avatar": new_user.avatar,
+            },
+        )
 
 
 @router.get("/me", response_model=UserResponse)
