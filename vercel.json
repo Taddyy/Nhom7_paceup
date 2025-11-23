@@ -8,6 +8,10 @@
     {
       "source": "/api/v1/:path*",
       "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/test",
+      "destination": "/api/test.py"
     }
   ],
   "version": 2
