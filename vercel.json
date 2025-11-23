@@ -2,9 +2,20 @@
   "functions": {
     "api/index.py": {
       "includeFiles": "backend/**"
+    },
+    "api/debug.py": {
+      "runtime": "@vercel/python"
     }
   },
   "rewrites": [
+    {
+      "source": "/api/debug",
+      "destination": "/api/debug"
+    },
+    {
+      "source": "/debug",
+      "destination": "/api/debug"
+    },
     {
       "source": "/api/v1/:path*",
       "destination": "/api/index"

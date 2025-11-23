@@ -1,0 +1,3 @@
+# Requirements đơn giản nhất để test môi trường Vercel
+# File này chỉ chứa các thư viện tối thiểu để test xem môi trường có hoạt động không
+
