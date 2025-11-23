@@ -40,15 +40,26 @@ export interface UserStats {
   events_joined: number
 }
 
+export interface User {
+  id: string
+  email: string
+  full_name: string
+  role?: string
+  phone?: string
+  date_of_birth?: string
+  gender?: string
+  address?: string
+  running_experience?: string
+  goals?: string
+  avatar?: string
+  created_at?: string
+  updated_at?: string
+}
+
 export interface AuthResponse {
   access_token: string
   token_type: string
-  user: {
-    id: string
-    email: string
-    full_name: string
-    role?: string
-  }
+  user: User
 }
 
 /**
@@ -85,16 +96,16 @@ export function logout(): void {
 /**
  * Get current user
  */
-export async function getCurrentUser() {
-  const response = await apiClient.get<AuthResponse['user']>('/auth/me')
+export async function getCurrentUser(): Promise<User> {
+  const response = await apiClient.get<User>('/auth/me')
   return response.data
 }
 
 /**
  * Update current user profile
  */
-export async function updateProfile(data: UserUpdate) {
-  const response = await apiClient.put('/auth/me', data)
+export async function updateProfile(data: UserUpdate): Promise<User> {
+  const response = await apiClient.put<User>('/auth/me', data)
   return response.data
 }
 
@@ -113,4 +124,3 @@ export async function getJoinedEvents(): Promise<Event[]> {
   const response = await apiClient.get<Event[]>('/auth/joined-events')
   return response.data
 }
-
