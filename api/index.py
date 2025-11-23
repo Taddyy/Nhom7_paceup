@@ -120,15 +120,16 @@ try:
     # Use Mangum to wrap FastAPI app for Vercel/Lambda
     log("✅ Function ready to handle requests")
     
-    # Make sure app is in scope
-    if 'app' not in locals():
-        error_msg = "Failed to import app from app.main"
+    # Make sure app is defined
+    if app is None:
+        error_msg = "Failed to import app from app.main - app is None"
         log(f"❌ {error_msg}")
         sys.stderr.flush()
         raise RuntimeError(error_msg)
     
     # Wrap FastAPI app with Mangum for Vercel serverless
     # Vercel can auto-detect ASGI apps, but Mangum provides better compatibility
+    handler = None
     try:
         log("Attempting to import Mangum...")
         from mangum import Mangum
@@ -137,27 +138,28 @@ try:
         log("✅ Mangum handler created")
         
         # Create handler function for Vercel
-        def handler(event, context):
-            """Vercel serverless function handler"""
-            return mangum_handler(event, context)
+        # Vercel expects handler(event) or handler(event, context)
+        # Mangum returns a callable that handles both
+        handler = mangum_handler
         log("✅ Handler function created")
     except ImportError as e:
         # Fallback: export app directly (Vercel may auto-detect ASGI)
-        log(f"⚠️ Mangum not available ({e}), exporting app directly")
-        mangum_handler = app
-        handler = app
+        log(f"⚠️ Mangum not available ({e}), will export app directly")
+        handler = None  # Let Vercel auto-detect ASGI app
     except Exception as e:
         log(f"❌ Error creating Mangum handler: {e}")
         traceback.print_exc(file=sys.stderr)
         sys.stderr.flush()
-        raise
+        # Don't raise - fallback to app export
+        handler = None
 
     log("✅ Function initialization complete")
     sys.stderr.flush()
     
-    # Store in globals for export
+    # Store in globals for export (ensure they're available at module level)
     globals()['app'] = app
-    globals()['handler'] = handler
+    if handler is not None:
+        globals()['handler'] = handler
     
 except Exception as e:
     # Catch ANY error that occurs during initialization
@@ -186,25 +188,28 @@ except Exception as e:
 # Vercel automatically detects ASGI apps when 'app' is exported at module level
 # According to Vercel docs, FastAPI apps are auto-detected, so we primarily export 'app'
 # The handler is a fallback for explicit handling
-if 'app' in globals():
-    # Always export app - Vercel will auto-detect it as ASGI
-    if 'handler' not in globals():
-        # If handler not created, try to create it
-        try:
-            from mangum import Mangum
-            handler = Mangum(app, lifespan="off")
-        except ImportError:
-            # If Mangum not available, just export app
-            pass
-    
-    # Export both if available, otherwise just app
-    if 'handler' in globals():
+
+# Get app and handler from globals (set in try-except above)
+app = globals().get('app')
+handler = globals().get('handler')
+
+# Ensure app is exported (required for Vercel ASGI auto-detection)
+if app is not None:
+    # Export app (Vercel will auto-detect it as ASGI)
+    # Also export handler if available
+    if handler is not None:
         __all__ = ['app', 'handler']
     else:
         __all__ = ['app']
 else:
     # If app is not defined, something went wrong during initialization
     # The error should have been logged in the try-except above
-    # We can't export anything, so Vercel will show the error
-    pass
+    # Create a minimal error app so Vercel can at least load the function
+    from fastapi import FastAPI
+    app = FastAPI(title="Error", description="App failed to initialize")
+    @app.get("/error")
+    async def error_endpoint():
+        return {"error": "Backend failed to initialize", "status": "error"}
+    __all__ = ['app']
+    print("⚠️ Created error app due to initialization failure", file=sys.stderr, flush=True)
 
