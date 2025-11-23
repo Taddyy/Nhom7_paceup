@@ -92,3 +92,12 @@ except Exception as e:
 # Vercel automatically detects ASGI apps when app is exported
 print("✅ Function ready to handle requests", file=sys.stderr)
 
+# Export app for Vercel
+# Vercel will automatically wrap this ASGI app with Mangum or similar
+# Make sure app is in scope
+if 'app' not in locals():
+    raise RuntimeError("Failed to import app from app.main")
+
+# Export the app - Vercel detects ASGI apps automatically
+__all__ = ['app']
+
