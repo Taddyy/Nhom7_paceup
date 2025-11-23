@@ -1,5 +1,5 @@
 import apiClient from './client'
-import type { BlogPost } from './blog'
+import type { BlogPost } from './blog-service'
 import type { Event } from './events'
 
 export interface AdminStats {
