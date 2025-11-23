@@ -194,31 +194,40 @@ except Exception as e:
     raise
 
 # Export app and handler at module level (outside try-except)
+# CRITICAL: Vercel requires 'app' to be a module-level variable, not from globals()
 # Vercel automatically detects ASGI apps when 'app' is exported at module level
-# According to Vercel docs, FastAPI apps are auto-detected, so we primarily export 'app'
-# The handler is a fallback for explicit handling
+
+# Initialize app and handler to None at module level
+app = None
+handler = None
 
 # Get app and handler from globals (set in try-except above)
-app = globals().get('app')
-handler = globals().get('handler')
+if 'app' in globals() and globals()['app'] is not None:
+    app = globals()['app']
+if 'handler' in globals() and globals()['handler'] is not None:
+    handler = globals()['handler']
 
 # Ensure app is exported (required for Vercel ASGI auto-detection)
-if app is not None:
-    # Export app (Vercel will auto-detect it as ASGI)
-    # Also export handler if available
-    if handler is not None:
-        __all__ = ['app', 'handler']
-    else:
-        __all__ = ['app']
-else:
+if app is None:
     # If app is not defined, something went wrong during initialization
     # The error should have been logged in the try-except above
     # Create a minimal error app so Vercel can at least load the function
-    from fastapi import FastAPI
-    app = FastAPI(title="Error", description="App failed to initialize")
-    @app.get("/error")
-    async def error_endpoint():
-        return {"error": "Backend failed to initialize", "status": "error"}
+    try:
+        from fastapi import FastAPI
+        app = FastAPI(title="Error", description="App failed to initialize")
+        @app.get("/error")
+        async def error_endpoint():
+            return {"error": "Backend failed to initialize", "status": "error"}
+        print("⚠️ Created error app due to initialization failure", file=sys.stderr, flush=True)
+    except Exception as e:
+        print(f"❌ Failed to create error app: {e}", file=sys.stderr, flush=True)
+        # Last resort: create a minimal dict-like object
+        app = {"error": "Complete initialization failure"}
+
+# Export app (Vercel will auto-detect it as ASGI)
+# Also export handler if available
+if handler is not None:
+    __all__ = ['app', 'handler']
+else:
     __all__ = ['app']
-    print("⚠️ Created error app due to initialization failure", file=sys.stderr, flush=True)
 
