@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getCurrentUser, updateProfile, getJoinedEvents, logout, type UserUpdate } from '@/lib/api/auth-service'
+import { getCurrentUser, updateProfile, getJoinedEvents, logout, type UserUpdate, type User } from '@/lib/api/auth-service'
 import { getBlogPosts, type BlogPost } from '@/lib/api/blog-service'
 import { getEvents, type Event } from '@/lib/api/events'
 import EventCard from '@/components/events/EventCard'
@@ -21,24 +21,13 @@ const TEXTAREA_CLASS =
 const DISABLED_INPUT_CLASS =
   'h-[56px] w-full rounded-[12px] border border-black/10 bg-gray-50 px-5 text-base text-gray-500'
 
-interface UserProfile {
-  id: string
-  email: string
-  full_name: string
-  phone?: string
-  date_of_birth?: string
-  gender?: string
-  address?: string
-  running_experience?: string
-  goals?: string
-  avatar?: string
-}
+// const INPUT_CLASS = ...
 
 type Tab = 'profile' | 'posts' | 'events_joined' | 'events_created'
 
 export default function ProfilePage() {
   const router = useRouter()
-  const [user, setUser] = useState<UserProfile | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('profile')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
