@@ -2,8 +2,7 @@
   "functions": {
     "api/index.py": {
       "includeFiles": "backend/**"
-    },
-    "api/test.py": {}
+    }
   },
   "rewrites": [
     {
