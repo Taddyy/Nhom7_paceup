@@ -172,17 +172,20 @@ Phải return dict với format:
 
 ### 9. Node.js Requirement
 
-**Quan trọng:** Một số deployment có thể yêu cầu Node.js version được set trong `package.json`:
+**Quan trọng:** Vercel yêu cầu Node.js version được set trong `package.json`:
 
 ```json
 {
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   }
 }
 ```
 
-**Lý do:** Vercel build system sử dụng Node.js để build, dù project là Python.
+**Lưu ý:** 
+- Node.js 18.x đã bị discontinued
+- Phải dùng Node.js 22.x (hoặc 20.x nếu cần)
+- Vercel build system sử dụng Node.js để build, dù project là Python
 
 ## So Sánh Với Cấu Hình Hiện Tại
 
