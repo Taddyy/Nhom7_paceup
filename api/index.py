@@ -78,18 +78,26 @@ try:
                 break
     
     # Import FastAPI app
+    # Try importing step by step to identify where it fails
     try:
-        log("Attempting to import app.main...")
-        try:
-            from app.main import app
-            log("✅ Successfully imported app.main")
-        except Exception as import_err:
-            log(f"❌ Error during import: {import_err}")
-            log(f"Error type: {type(import_err).__name__}")
-            log("Full traceback:")
-            traceback.print_exc(file=sys.stderr)
-            sys.stderr.flush()
-            raise
+        log("Step 1: Testing basic imports...")
+        import fastapi
+        log(f"✅ FastAPI version: {fastapi.__version__}")
+        
+        log("Step 2: Testing app.core.config import...")
+        from app.core import config
+        log(f"✅ Config loaded, DATABASE_URL: {config.settings.DATABASE_URL[:50]}...")
+        
+        log("Step 3: Testing app.core.database import...")
+        from app.core import database
+        log("✅ Database module imported")
+        
+        log("Step 4: Testing app.main import...")
+        from app.main import app
+        log("✅ Successfully imported app.main")
+        log(f"✅ App type: {type(app)}")
+        log(f"✅ App title: {app.title}")
+        
     except ImportError as e:
         # Print detailed error for debugging
         error_msg = f"""
@@ -99,7 +107,7 @@ try:
    Backend path: {backend_dir}
    Backend exists: {os.path.exists(backend_dir)}
    Current dir: {os.getcwd()}
-   Python path: {sys.path}
+   Python path: {sys.path[:5]}
    Traceback:
 {traceback.format_exc()}
 """
@@ -108,7 +116,8 @@ try:
         raise
     except Exception as e:
         error_msg = f"""
-❌ Unexpected Error: {e}
+❌ Unexpected Error during import: {e}
+   Type: {type(e).__name__}
    Traceback:
 {traceback.format_exc()}
 """
