@@ -118,4 +118,6 @@ except ImportError:
 # Export app for Vercel
 # Vercel automatically detects ASGI apps when 'app' is exported at module level
 # This is the standard way for Vercel to handle FastAPI
+# Make sure 'app' is available at module level for Vercel to detect
+__all__ = ['app', 'handler']
 
