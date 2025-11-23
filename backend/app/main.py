@@ -65,19 +65,39 @@ try:
     # Include API router
     app.include_router(api_router, prefix="/api/v1")
     
+except ImportError as ie:
+    # Import errors - in chi tiết
+    print("=" * 80, file=sys.stderr, flush=True)
+    print("❌ IMPORT ERROR IN app.main", file=sys.stderr, flush=True)
+    print("=" * 80, file=sys.stderr, flush=True)
+    print(f"Error: {ie}", file=sys.stderr, flush=True)
+    print(f"Module: {ie.name if hasattr(ie, 'name') else 'Unknown'}", file=sys.stderr, flush=True)
+    print("\nTraceback:", file=sys.stderr, flush=True)
+    traceback.print_exc(file=sys.stderr)
+    print("=" * 80, file=sys.stderr, flush=True)
+    # Re-raise để api/index.py có thể bắt được
+    raise
+    
 except Exception as e:
-    # Nếu có lỗi, in nó ra Console để Vercel ghi lại
-    print("--------------------------------------------------", file=sys.stderr, flush=True)
-    print("CRITICAL ERROR DURING APP MAIN INITIALIZATION:", file=sys.stderr, flush=True)
-    print(str(e), file=sys.stderr, flush=True)
-    traceback.print_exc(file=sys.stderr)  # In chi tiết dòng lỗi
-    print("--------------------------------------------------", file=sys.stderr, flush=True)
-    # Cũng in ra stdout
-    print("--------------------------------------------------", flush=True)
-    print("CRITICAL ERROR DURING APP MAIN INITIALIZATION:", flush=True)
-    print(str(e), flush=True)
-    traceback.print_exc()  # In chi tiết dòng lỗi
-    print("--------------------------------------------------", flush=True)
+    # Các lỗi khác - in chi tiết
+    print("=" * 80, file=sys.stderr, flush=True)
+    print("❌ CRITICAL ERROR DURING APP MAIN INITIALIZATION", file=sys.stderr, flush=True)
+    print("=" * 80, file=sys.stderr, flush=True)
+    print(f"Error Type: {type(e).__name__}", file=sys.stderr, flush=True)
+    print(f"Error Message: {str(e)}", file=sys.stderr, flush=True)
+    print("\nFull Traceback:", file=sys.stderr, flush=True)
+    traceback.print_exc(file=sys.stderr)
+    print("=" * 80, file=sys.stderr, flush=True)
+    
+    # Cũng in ra stdout để chắc chắn
+    print("=" * 80, flush=True)
+    print("❌ CRITICAL ERROR DURING APP MAIN INITIALIZATION", flush=True)
+    print("=" * 80, flush=True)
+    print(f"Error Type: {type(e).__name__}", flush=True)
+    print(f"Error Message: {str(e)}", flush=True)
+    print("\nFull Traceback:", flush=True)
+    traceback.print_exc()
+    print("=" * 80, flush=True)
     
     # Đảm bảo logger được khởi tạo để log lỗi
     try:
