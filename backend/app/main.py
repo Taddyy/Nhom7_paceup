@@ -17,12 +17,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create tables (only in development, use migrations in production)
-if os.getenv("ENVIRONMENT") != "production":
-    logger.info("Creating database tables...")
-    Base.metadata.create_all(bind=engine)
-else:
-    logger.info("Production mode: skipping table creation (use migrations)")
+# Don't create tables on import - use /api/v1/init-db endpoint instead
+# This prevents import errors if database is not ready
+logger.info("Production mode: Tables will be created via /api/v1/init-db endpoint")
 
 app = FastAPI(
     title="PaceUp API",
