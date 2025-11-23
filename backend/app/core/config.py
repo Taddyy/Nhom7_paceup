@@ -25,6 +25,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://localhost:3001",
         "https://paceup.vercel.app",
+        "https://nhom7-paceup.vercel.app",
+        "https://nhom7-paceup-git-main-taddyuiux-4154s-projects.vercel.app",
     ]
     
     # Allow adding custom domains via env var (comma separated)

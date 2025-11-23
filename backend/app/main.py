@@ -1,22 +1,36 @@
 """
 Main FastAPI application entry point
 """
+import logging
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.api.v1.api import api_router
-import os
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+# Create tables (only in development, use migrations in production)
+if os.getenv("ENVIRONMENT") != "production":
+    logger.info("Creating database tables...")
+    Base.metadata.create_all(bind=engine)
+else:
+    logger.info("Production mode: skipping table creation (use migrations)")
 
 app = FastAPI(
     title="PaceUp API",
     description="API for PaceUp running community platform",
     version="1.0.0",
 )
+
+logger.info("Starting PaceUp API...")
 
 # CORS middleware
 app.add_middleware(
@@ -45,4 +59,14 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy"}
+    try:
+        # Test database connection
+        from app.core.database import SessionLocal
+        from sqlalchemy import text
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
