@@ -39,9 +39,18 @@ app.add_middleware(
 )
 
 # Serve static files (uploads)
-# Ensure directory exists
-os.makedirs("public/uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="public/uploads"), name="uploads")
+# Note: Vercel serverless functions have read-only file system
+# Static file serving is handled by Vercel's static file system
+# Only create directory if not in serverless environment
+if not os.getenv("VERCEL"):
+    try:
+        os.makedirs("public/uploads", exist_ok=True)
+        app.mount("/uploads", StaticFiles(directory="public/uploads"), name="uploads")
+    except OSError:
+        # Read-only file system (e.g., Vercel serverless)
+        logger.warning("Cannot create uploads directory (read-only file system). Static files will be handled by Vercel.")
+else:
+    logger.info("Vercel environment detected: skipping local uploads directory creation")
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
