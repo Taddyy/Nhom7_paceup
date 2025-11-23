@@ -155,6 +155,10 @@ try:
     log("✅ Function initialization complete")
     sys.stderr.flush()
     
+    # Store in globals for export
+    globals()['app'] = app
+    globals()['handler'] = handler
+    
 except Exception as e:
     # Catch ANY error that occurs during initialization
     error_msg = f"""
@@ -182,23 +186,19 @@ except Exception as e:
 # Vercel automatically detects ASGI apps when 'app' is exported at module level
 # Also export handler function for explicit handling
 # Vercel will try to use handler first, then fall back to app
-try:
-    # Make sure app and handler are defined
-    if 'app' not in globals():
-        raise RuntimeError("app not defined - import failed")
-    if 'handler' not in globals():
-        # If handler not defined, create a simple one
-        try:
-            from mangum import Mangum
-            handler = Mangum(app, lifespan="off")
-        except ImportError:
-            handler = app
+if 'app' in globals() and 'handler' in globals():
     __all__ = ['app', 'handler']
-except Exception as e:
-    # If export fails, at least try to export app
-    print(f"Export error: {e}", file=sys.stderr, flush=True)
-    if 'app' in globals():
+elif 'app' in globals():
+    # If only app is defined, export it and create a simple handler
+    try:
+        from mangum import Mangum
+        handler = Mangum(app, lifespan="off")
+        __all__ = ['app', 'handler']
+    except ImportError:
         __all__ = ['app']
-    else:
-        raise
+else:
+    # If app is not defined, something went wrong
+    # But we can't raise here or Vercel won't even try to load the function
+    # So we'll let Vercel show the error from the try-except above
+    pass
 
