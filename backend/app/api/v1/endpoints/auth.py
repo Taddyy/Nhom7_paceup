@@ -4,6 +4,7 @@ Authentication endpoints
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from app.core.database import get_db
 from app.core.security import verify_password, get_password_hash, create_access_token, decode_access_token
 from app.core.config import settings
@@ -23,13 +24,31 @@ router = APIRouter()
 async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
     """Login endpoint"""
     import logging
+    import traceback
     logger = logging.getLogger(__name__)
     
     try:
         logger.info(f"Login attempt for email: {credentials.email}")
         
+        # Test database connection first
+        try:
+            db.execute(text("SELECT 1"))
+        except Exception as db_error:
+            logger.error(f"Database connection error: {db_error}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database connection failed"
+            )
+        
         # Query user from database
-        user = db.query(User).filter(User.email == credentials.email).first()
+        try:
+            user = db.query(User).filter(User.email == credentials.email).first()
+        except Exception as query_error:
+            logger.error(f"Database query error: {query_error}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to query user"
+            )
         
         if not user:
             logger.warning(f"User not found: {credentials.email}")
@@ -40,7 +59,16 @@ async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
             )
         
         # Verify password
-        if not verify_password(credentials.password, user.hashed_password):
+        try:
+            password_valid = verify_password(credentials.password, user.hashed_password)
+        except Exception as pwd_error:
+            logger.error(f"Password verification error: {pwd_error}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Password verification failed"
+            )
+        
+        if not password_valid:
             logger.warning(f"Invalid password for user: {credentials.email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -57,10 +85,17 @@ async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
             )
         
         # Create access token
-        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user.id}, expires_delta=access_token_expires
-        )
+        try:
+            access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = create_access_token(
+                data={"sub": user.id}, expires_delta=access_token_expires
+            )
+        except Exception as token_error:
+            logger.error(f"Token creation error: {token_error}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create access token"
+            )
         
         logger.info(f"Login successful for user: {credentials.email}")
         
@@ -78,8 +113,9 @@ async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
         # Re-raise HTTP exceptions (401, 403, etc.)
         raise
     except Exception as e:
-        # Log unexpected errors
-        logger.error(f"Unexpected error during login: {e}", exc_info=True)
+        # Log unexpected errors with full traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Unexpected error during login: {e}\n{error_trace}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}"
