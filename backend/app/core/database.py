@@ -7,11 +7,23 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
 # Database connection
+# For TiDB Cloud, we need to handle SSL connection
+connect_args = {}
+if "tidbcloud.com" in settings.DATABASE_URL:
+    # TiDB Cloud requires SSL
+    connect_args = {
+        "ssl": {
+            "ssl_disabled": False,
+            "check_hostname": False
+        }
+    }
+
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
     pool_recycle=3600,
-    echo=False
+    echo=False,
+    connect_args=connect_args
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
