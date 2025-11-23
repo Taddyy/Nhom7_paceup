@@ -77,6 +77,7 @@ async def health_check():
 # TODO: Remove these endpoints after database is initialized
 # ============================================================================
 
+@app.get("/api/v1/init-db")
 @app.post("/api/v1/init-db")
 async def init_database_endpoint():
     """
@@ -87,7 +88,8 @@ async def init_database_endpoint():
     """
     try:
         logger.info("Initializing database tables...")
-        from app.models import user, event, blog  # Import all models to register them
+        # Import all models to register them with Base.metadata
+        from app.models import user, event, blog
         
         Base.metadata.create_all(bind=engine)
         
@@ -100,13 +102,18 @@ async def init_database_endpoint():
             "tables": tables_created
         }
     except Exception as e:
-        logger.error(f"❌ Failed to create database tables: {e}")
+        logger.error(f"❌ Failed to create database tables: {e}", exc_info=True)
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Full traceback: {error_trace}")
         return {
             "status": "error",
-            "message": f"Failed to create database tables: {str(e)}"
+            "message": f"Failed to create database tables: {str(e)}",
+            "error_type": type(e).__name__
         }
 
 
+@app.get("/api/v1/seed-admin")
 @app.post("/api/v1/seed-admin")
 async def seed_admin_endpoint():
     """
@@ -164,8 +171,12 @@ async def seed_admin_endpoint():
         finally:
             db.close()
     except Exception as e:
-        logger.error(f"❌ Failed to create admin user: {e}")
+        logger.error(f"❌ Failed to create admin user: {e}", exc_info=True)
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Full traceback: {error_trace}")
         return {
             "status": "error",
-            "message": f"Failed to create admin user: {str(e)}"
+            "message": f"Failed to create admin user: {str(e)}",
+            "error_type": type(e).__name__
         }
