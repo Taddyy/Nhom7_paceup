@@ -8,9 +8,12 @@ from app.core.config import settings
 
 # Database connection
 # For TiDB Cloud, we need to handle SSL connection
+# TiDB is MySQL-compatible, so we use pymysql driver
 connect_args = {}
 if "tidbcloud.com" in settings.DATABASE_URL:
     # TiDB Cloud requires SSL
+    # pymysql handles SSL automatically when using mysql+pymysql://
+    # But we can explicitly configure it if needed
     connect_args = {
         "ssl": {
             "ssl_disabled": False,
