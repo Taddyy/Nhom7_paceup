@@ -1,3 +1,5 @@
+import { Suspense } from 'react'
+
 import HeroSection from '@/components/home/HeroSection'
 import RegisteredEventsSection from '@/components/home/RegisteredEventsSection'
 import UpcomingEventsSection from '@/components/home/UpcomingEventsSection'
@@ -233,7 +235,9 @@ import HomeToast from '@/components/home/HomeToast'
 export default function HomePage() {
   return (
     <div className="bg-white flex flex-col items-center relative min-h-screen w-full">
-      <HomeToast />
+      <Suspense fallback={null}>
+        <HomeToast />
+      </Suspense>
       <div className="w-full max-w-[1440px] relative">
         <HeroSection />
       </div>
