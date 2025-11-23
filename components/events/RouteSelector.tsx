@@ -29,7 +29,7 @@ export default function RouteSelector({ onPointsChange }: RouteSelectorProps) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-    libraries
+    libraries: libraries as any
   })
 
   const [startPoint, setStartPoint] = useState<Point | null>(null)
