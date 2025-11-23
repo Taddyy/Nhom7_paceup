@@ -24,21 +24,30 @@ try:
 except ImportError as e:
     # Print detailed error for debugging
     import traceback
-    print(f"❌ Import Error Details:", file=sys.stderr)
-    print(f"   Error: {e}", file=sys.stderr)
-    print(f"   Type: {type(e).__name__}", file=sys.stderr)
-    print(f"   Backend path: {backend_dir}", file=sys.stderr)
-    print(f"   Backend exists: {os.path.exists(backend_dir)}", file=sys.stderr)
-    print(f"   Current dir: {os.getcwd()}", file=sys.stderr)
-    print(f"   Python path: {sys.path}", file=sys.stderr)
-    print(f"   Traceback:\n{traceback.format_exc()}", file=sys.stderr)
+    error_msg = f"""
+❌ Import Error Details:
+   Error: {e}
+   Type: {type(e).__name__}
+   Backend path: {backend_dir}
+   Backend exists: {os.path.exists(backend_dir)}
+   Current dir: {os.getcwd()}
+   Python path: {sys.path}
+   Traceback:
+{traceback.format_exc()}
+"""
+    print(error_msg, file=sys.stderr)
     raise
 except Exception as e:
     import traceback
-    print(f"❌ Unexpected Error: {e}", file=sys.stderr)
-    print(f"   Traceback:\n{traceback.format_exc()}", file=sys.stderr)
+    error_msg = f"""
+❌ Unexpected Error: {e}
+   Traceback:
+{traceback.format_exc()}
+"""
+    print(error_msg, file=sys.stderr)
     raise
 
-# Vercel handler - export app directly
-# Vercel automatically detects ASGI apps (FastAPI)
+# Vercel handler function
+# Vercel automatically detects ASGI apps when app is exported
+# For explicit handler, we can also use: handler = app
 
