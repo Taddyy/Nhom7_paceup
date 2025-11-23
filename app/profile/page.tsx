@@ -49,7 +49,7 @@ export default function ProfilePage() {
   const [createdEvents, setCreatedEvents] = useState<Event[]>([])
 
   // Toast state
-  const [toast, setToast] = useState({ message: '', type: 'success' as const, isVisible: false })
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean }>({ message: '', type: 'success', isVisible: false })
 
   // Form state
   const [formData, setFormData] = useState<UserUpdate>({})

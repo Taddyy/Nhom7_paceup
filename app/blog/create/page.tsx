@@ -10,7 +10,7 @@ import RichTextEditor from '@/components/ui/RichTextEditor'
 export default function CreateBlogPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [toast, setToast] = useState({ message: '', type: 'success' as const, isVisible: false })
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean }>({ message: '', type: 'success', isVisible: false })
   
   const [formData, setFormData] = useState({
     title: '',
