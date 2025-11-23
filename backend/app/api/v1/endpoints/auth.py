@@ -185,29 +185,29 @@ async def register(user_data: RegisterRequest, db: Session = Depends(get_db)):
         data={"sub": new_user.id}, expires_delta=access_token_expires
     )
     
-        # Convert is_active from string to bool
-        is_active_bool = new_user.is_active == "true" if new_user.is_active else False
-        
-        return AuthResponse(
-            access_token=access_token,
-            token_type="bearer",
-            user={
-                "id": new_user.id,
-                "email": new_user.email,
-                "full_name": new_user.full_name,
-                "role": new_user.role,
-                "is_active": is_active_bool,
-                "created_at": new_user.created_at if new_user.created_at else datetime.utcnow(),
-                "updated_at": new_user.updated_at,
-                "phone": new_user.phone,
-                "date_of_birth": new_user.date_of_birth,
-                "gender": new_user.gender.value if new_user.gender else None,
-                "address": new_user.address,
-                "running_experience": new_user.running_experience.value if new_user.running_experience else None,
-                "goals": new_user.goals,
-                "avatar": new_user.avatar,
-            },
-        )
+    # Convert is_active from string to bool
+    is_active_bool = new_user.is_active == "true" if new_user.is_active else False
+    
+    return AuthResponse(
+        access_token=access_token,
+        token_type="bearer",
+        user={
+            "id": new_user.id,
+            "email": new_user.email,
+            "full_name": new_user.full_name,
+            "role": new_user.role,
+            "is_active": is_active_bool,
+            "created_at": new_user.created_at if new_user.created_at else datetime.utcnow(),
+            "updated_at": new_user.updated_at,
+            "phone": new_user.phone,
+            "date_of_birth": new_user.date_of_birth,
+            "gender": new_user.gender.value if new_user.gender else None,
+            "address": new_user.address,
+            "running_experience": new_user.running_experience.value if new_user.running_experience else None,
+            "goals": new_user.goals,
+            "avatar": new_user.avatar,
+        },
+    )
 
 
 @router.get("/me", response_model=UserResponse)
