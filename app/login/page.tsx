@@ -71,7 +71,33 @@ export default function LoginPage() {
     'h-[62px] w-full rounded-[12px] border border-black/25 px-6 text-base text-[#1c1c1c] placeholder-black/40 focus:border-black focus:ring-2 focus:ring-black/10 focus:outline-none transition-all'
 
   return (
-    <div className="bg-white min-h-screen">
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        /* Hide browser autofill icons */
+        input[type="password"]::-webkit-credentials-auto-fill-button,
+        input[type="password"]::-webkit-strong-password-auto-fill-button {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+        }
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear {
+          display: none !important;
+        }
+        #password::-webkit-credentials-auto-fill-button,
+        #password::-webkit-strong-password-auto-fill-button {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+        }
+        #password::-ms-reveal,
+        #password::-ms-clear {
+          display: none !important;
+        }
+      `}} />
+      <div className="bg-white min-h-screen">
       {isToastVisible && (
         <div
           className="fixed right-6 top-6 z-50 flex max-w-sm items-start gap-3 rounded-[24px] border border-red-300 bg-[#dc2626] px-5 py-4 text-white shadow-2xl"
@@ -180,12 +206,16 @@ export default function LoginPage() {
                     value={formData.password}
                     onChange={handleChange}
                     className={`${sharedInputClasses} pr-14`}
+                    autoComplete="current-password"
+                    style={{
+                      WebkitTextSecurity: isPasswordVisible ? 'none' : 'disc',
+                    }}
                   />
                   <button
                     type="button"
                     aria-label={isPasswordVisible ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
                     onClick={() => setIsPasswordVisible((prev) => !prev)}
-                    className="absolute right-6 top-1/2 -translate-y-1/2 text-black"
+                    className="absolute right-6 top-1/2 -translate-y-1/2 z-10 text-black hover:opacity-70 transition-opacity"
                   >
                     <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none">
                       <path
@@ -245,5 +275,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }
