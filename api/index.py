@@ -60,8 +60,16 @@ else:
 # Import FastAPI app
 try:
     print("Attempting to import app.main...", file=sys.stderr)
-    from app.main import app
-    print("✅ Successfully imported app.main", file=sys.stderr)
+    import traceback
+    try:
+        from app.main import app
+        print("✅ Successfully imported app.main", file=sys.stderr)
+    except Exception as import_err:
+        print(f"❌ Error during import: {import_err}", file=sys.stderr)
+        print(f"Error type: {type(import_err).__name__}", file=sys.stderr)
+        print("Full traceback:", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        raise
 except ImportError as e:
     # Print detailed error for debugging
     import traceback
