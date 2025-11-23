@@ -1,7 +1,7 @@
 """
 Application configuration
 """
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 import os
 
@@ -29,14 +29,18 @@ class Settings(BaseSettings):
         "https://nhom7-paceup-git-main-taddyuiux-4154s-projects.vercel.app",
     ]
     
-    # Allow adding custom domains via env var (comma separated)
-    # e.g. https://paceup.vn,https://www.paceup.vn
-    if os.getenv("ADDITIONAL_CORS_ORIGINS"):
-        CORS_ORIGINS.extend(os.getenv("ADDITIONAL_CORS_ORIGINS").split(","))
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    # Pydantic v2 config
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore"
+    )
 
 
+# Create settings instance
 settings = Settings()
+
+# Allow adding custom domains via env var (comma separated)
+# e.g. https://paceup.vn,https://www.paceup.vn
+if os.getenv("ADDITIONAL_CORS_ORIGINS"):
+    settings.CORS_ORIGINS.extend(os.getenv("ADDITIONAL_CORS_ORIGINS").split(","))
