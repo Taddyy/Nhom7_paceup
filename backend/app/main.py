@@ -63,8 +63,8 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint"""
+async def health_check_root():
+    """Health check endpoint at root level"""
     try:
         # Test database connection
         from app.core.database import SessionLocal
