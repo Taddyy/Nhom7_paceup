@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import CTASection from '@/components/home/CTASection'
 import { FALLBACK_EVENT_DETAILS_MAP, type FallbackEventDetail } from '@/lib/data/fallbackEvents'
-import { getFallbackEventDetail, type EventDetailSection } from '@/lib/data/fallbackEventDetails'
+import { getFallbackEventDetail, type EventDetailSection } from '@/lib/data/fallback-event-details'
 
 interface Event {
   id: string

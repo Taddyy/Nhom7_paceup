@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { login } from '@/lib/api/auth'
+import { login } from '@/lib/api/auth-service'
 
 const HERO_IMAGE = '/Image/Login.png'
 const TESTIMONIAL_AVATAR = '/Image/Run 4.png'

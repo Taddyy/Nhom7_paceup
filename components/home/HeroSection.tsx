@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import { getCurrentUser, getUserStats, type UserStats } from '@/lib/api/auth'
+import { getCurrentUser, getUserStats, type UserStats } from '@/lib/api/auth-service'
 
 /**
  * Hero section component matching Figma design.

@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getAdminStats, getAdminPosts, updatePostStatus, getAdminEvents, updateEventStatus, type AdminStats } from '@/lib/api/admin'
-import { getCurrentUser } from '@/lib/api/auth'
-import type { BlogPost } from '@/lib/api/blog'
+import { getCurrentUser } from '@/lib/api/auth-service'
+import type { BlogPost } from '@/lib/api/blog-service'
 import type { Event } from '@/lib/api/events'
 import Toast from '@/components/ui/Toast'
 

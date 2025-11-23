@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { getCurrentUser } from '@/lib/api/auth'
+import { getCurrentUser } from '@/lib/api/auth-service'
 
 /**
  * Header component that mirrors the translucent navigation capsule in Figma.

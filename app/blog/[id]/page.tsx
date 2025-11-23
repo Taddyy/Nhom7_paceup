@@ -30,7 +30,7 @@ export default function BlogPostPage() {
     const fetchPost = async () => {
       try {
         setIsLoading(true)
-        const { getBlogPost } = await import('@/lib/api/blog')
+        const { getBlogPost } = await import('@/lib/api/blog-service')
         const postData = await getBlogPost(params.id as string)
         setPost({
           id: postData.id,

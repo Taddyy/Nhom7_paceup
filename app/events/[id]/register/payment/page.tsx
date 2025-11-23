@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import CTASection from '@/components/home/CTASection'
 import { getEvent } from '@/lib/api/events'
 import { FALLBACK_EVENT_DETAILS_MAP, type FallbackEventDetail } from '@/lib/data/fallbackEvents'
-import { getFallbackEventDetail } from '@/lib/data/fallbackEventDetails'
+import { getFallbackEventDetail } from '@/lib/data/fallback-event-details'
 import StepIndicator, {
   STEP_ICON_PATHS,
   type StepConfig

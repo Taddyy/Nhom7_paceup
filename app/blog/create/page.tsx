@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { createBlogPost } from '@/lib/api/blog'
+import { createBlogPost } from '@/lib/api/blog-service'
 import Toast from '@/components/ui/Toast'
 import RichTextEditor from '@/components/ui/RichTextEditor'
 
