@@ -3,13 +3,19 @@ Vercel Serverless Function entry point for FastAPI
 """
 import sys
 import os
+import traceback
+
+# Ensure all output goes to stderr for Vercel logs
+def log(msg):
+    """Log to stderr for Vercel visibility"""
+    print(msg, file=sys.stderr, flush=True)
 
 # Debug: Print environment info
-print("=== Vercel Python Function Startup ===", file=sys.stderr)
-print(f"Python version: {sys.version}", file=sys.stderr)
-print(f"Current file: {__file__}", file=sys.stderr)
-print(f"Current dir: {os.getcwd()}", file=sys.stderr)
-print(f"Python path: {sys.path}", file=sys.stderr)
+log("=== Vercel Python Function Startup ===")
+log(f"Python version: {sys.version}")
+log(f"Current file: {__file__}")
+log(f"Current dir: {os.getcwd()}")
+log(f"Python path: {sys.path}")
 
 # Get absolute paths
 current_file = os.path.abspath(__file__)
@@ -17,16 +23,16 @@ api_dir = os.path.dirname(current_file)
 project_root = os.path.dirname(api_dir)
 backend_dir = os.path.join(project_root, 'backend')
 
-print(f"API dir: {api_dir}", file=sys.stderr)
-print(f"Project root: {project_root}", file=sys.stderr)
-print(f"Backend dir: {backend_dir}", file=sys.stderr)
-print(f"Backend exists: {os.path.exists(backend_dir)}", file=sys.stderr)
+log(f"API dir: {api_dir}")
+log(f"Project root: {project_root}")
+log(f"Backend dir: {backend_dir}")
+log(f"Backend exists: {os.path.exists(backend_dir)}")
 
 # List files in project root
 if os.path.exists(project_root):
     try:
         root_files = os.listdir(project_root)
-        print(f"Files in project root: {root_files[:10]}", file=sys.stderr)
+        log(f"Files in project root: {root_files[:10]}")
     except:
         pass
 
@@ -34,13 +40,13 @@ if os.path.exists(project_root):
 if os.path.exists(backend_dir):
     if backend_dir not in sys.path:
         sys.path.insert(0, backend_dir)
-        print(f"Added backend to path: {backend_dir}", file=sys.stderr)
+        log(f"Added backend to path: {backend_dir}")
     
     # Set working directory to backend for relative imports
     os.chdir(backend_dir)
-    print(f"Changed working dir to: {os.getcwd()}", file=sys.stderr)
+    log(f"Changed working dir to: {os.getcwd()}")
 else:
-    print(f"⚠️ WARNING: Backend directory not found at {backend_dir}", file=sys.stderr)
+    log(f"⚠️ WARNING: Backend directory not found at {backend_dir}")
     # Try alternative paths
     alt_paths = [
         os.path.join(project_root, '..', 'backend'),
@@ -50,7 +56,7 @@ else:
     for alt_path in alt_paths:
         abs_alt = os.path.abspath(alt_path)
         if os.path.exists(abs_alt):
-            print(f"Found backend at alternative path: {abs_alt}", file=sys.stderr)
+            log(f"Found backend at alternative path: {abs_alt}")
             if abs_alt not in sys.path:
                 sys.path.insert(0, abs_alt)
             os.chdir(abs_alt)
@@ -59,20 +65,19 @@ else:
 
 # Import FastAPI app
 try:
-    print("Attempting to import app.main...", file=sys.stderr)
-    import traceback
+    log("Attempting to import app.main...")
     try:
         from app.main import app
-        print("✅ Successfully imported app.main", file=sys.stderr)
+        log("✅ Successfully imported app.main")
     except Exception as import_err:
-        print(f"❌ Error during import: {import_err}", file=sys.stderr)
-        print(f"Error type: {type(import_err).__name__}", file=sys.stderr)
-        print("Full traceback:", file=sys.stderr)
+        log(f"❌ Error during import: {import_err}")
+        log(f"Error type: {type(import_err).__name__}")
+        log("Full traceback:")
         traceback.print_exc(file=sys.stderr)
+        sys.stderr.flush()
         raise
 except ImportError as e:
     # Print detailed error for debugging
-    import traceback
     error_msg = f"""
 ❌ Import Error Details:
    Error: {e}
@@ -84,42 +89,57 @@ except ImportError as e:
    Traceback:
 {traceback.format_exc()}
 """
-    print(error_msg, file=sys.stderr)
+    log(error_msg)
+    sys.stderr.flush()
     raise
 except Exception as e:
-    import traceback
     error_msg = f"""
 ❌ Unexpected Error: {e}
    Traceback:
 {traceback.format_exc()}
 """
-    print(error_msg, file=sys.stderr)
+    log(error_msg)
+    sys.stderr.flush()
     raise
 
 # Vercel handler function
 # Use Mangum to wrap FastAPI app for Vercel/Lambda
-print("✅ Function ready to handle requests", file=sys.stderr)
+log("✅ Function ready to handle requests")
 
 # Make sure app is in scope
 if 'app' not in locals():
-    raise RuntimeError("Failed to import app from app.main")
+    error_msg = "Failed to import app from app.main"
+    log(f"❌ {error_msg}")
+    sys.stderr.flush()
+    raise RuntimeError(error_msg)
 
 # Wrap FastAPI app with Mangum for Vercel serverless
 # Vercel can auto-detect ASGI apps, but Mangum provides better compatibility
 try:
+    log("Attempting to import Mangum...")
     from mangum import Mangum
+    log("✅ Mangum imported successfully")
     mangum_handler = Mangum(app, lifespan="off")
-    print("✅ Mangum handler created", file=sys.stderr)
+    log("✅ Mangum handler created")
     
     # Create handler function for Vercel
     def handler(event, context):
         """Vercel serverless function handler"""
         return mangum_handler(event, context)
-except ImportError:
+    log("✅ Handler function created")
+except ImportError as e:
     # Fallback: export app directly (Vercel may auto-detect ASGI)
-    print("⚠️ Mangum not available, exporting app directly", file=sys.stderr)
+    log(f"⚠️ Mangum not available ({e}), exporting app directly")
     mangum_handler = app
     handler = app
+except Exception as e:
+    log(f"❌ Error creating Mangum handler: {e}")
+    traceback.print_exc(file=sys.stderr)
+    sys.stderr.flush()
+    raise
+
+log("✅ Function initialization complete")
+sys.stderr.flush()
 
 # Export app for Vercel
 # Vercel automatically detects ASGI apps when 'app' is exported at module level
