@@ -7,11 +7,11 @@
   "rewrites": [
     {
       "source": "/api/v1/:path*",
-      "destination": "/api/index.py"
+      "destination": "/api/index"
     },
     {
       "source": "/api/test",
-      "destination": "/api/test.py"
+      "destination": "/api/test"
     }
   ],
   "version": 2
