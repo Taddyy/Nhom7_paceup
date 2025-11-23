@@ -69,13 +69,13 @@ export default function ProfilePage() {
       setUser(userData)
       setFormData({
         full_name: userData.full_name,
-        phone: userData.phone || '',
-        date_of_birth: userData.date_of_birth?.split('T')[0] || '', // Format for input type="date"
-        gender: userData.gender || '',
-        address: userData.address || '',
-        running_experience: userData.running_experience || '',
-        goals: userData.goals || '',
-        avatar: userData.avatar || ''
+        phone: (userData as any).phone || '',
+        date_of_birth: (userData as any).date_of_birth?.split('T')[0] || '', // Format for input type="date"
+        gender: (userData as any).gender || '',
+        address: (userData as any).address || '',
+        running_experience: (userData as any).running_experience || '',
+        goals: (userData as any).goals || '',
+        avatar: (userData as any).avatar || ''
       })
     } catch (error) {
       console.error('Error fetching user:', error)
