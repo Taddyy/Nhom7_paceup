@@ -1,42 +1,44 @@
 """
 Vercel Serverless Function entry point for FastAPI
-Updated: 2025-11-23 - Force redeploy
 """
 import sys
 import os
 
-# Get absolute path to project root
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-backend_path = os.path.join(project_root, 'backend')
+# Get absolute paths
+current_file = os.path.abspath(__file__)
+api_dir = os.path.dirname(current_file)
+project_root = os.path.dirname(api_dir)
+backend_dir = os.path.join(project_root, 'backend')
 
-# Add backend to Python path
-if backend_path not in sys.path:
-    sys.path.insert(0, backend_path)
+# Add backend to Python path (must be absolute)
+if os.path.exists(backend_dir) and backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
-# Change to backend directory for imports
-os.chdir(backend_path)
+# Set working directory to backend for relative imports
+if os.path.exists(backend_dir):
+    os.chdir(backend_dir)
 
+# Import FastAPI app
 try:
-    # Import FastAPI app
     from app.main import app
-    print(f"✅ Successfully imported app from {backend_path}", file=sys.stderr)
-except Exception as e:
-    # Detailed error for debugging
+except ImportError as e:
+    # Print detailed error for debugging
     import traceback
-    error_details = {
-        "error": str(e),
-        "error_type": type(e).__name__,
-        "traceback": traceback.format_exc(),
-        "sys_path": sys.path,
-        "cwd": os.getcwd(),
-        "backend_path": backend_path,
-        "project_root": project_root
-    }
-    error_msg = f"❌ Failed to import app.main:\n{error_details}"
-    print(error_msg, file=sys.stderr)
+    print(f"❌ Import Error Details:", file=sys.stderr)
+    print(f"   Error: {e}", file=sys.stderr)
+    print(f"   Type: {type(e).__name__}", file=sys.stderr)
+    print(f"   Backend path: {backend_dir}", file=sys.stderr)
+    print(f"   Backend exists: {os.path.exists(backend_dir)}", file=sys.stderr)
+    print(f"   Current dir: {os.getcwd()}", file=sys.stderr)
+    print(f"   Python path: {sys.path}", file=sys.stderr)
+    print(f"   Traceback:\n{traceback.format_exc()}", file=sys.stderr)
+    raise
+except Exception as e:
+    import traceback
+    print(f"❌ Unexpected Error: {e}", file=sys.stderr)
+    print(f"   Traceback:\n{traceback.format_exc()}", file=sys.stderr)
     raise
 
-# Export app for Vercel
-# Vercel will automatically detect ASGI apps
+# Vercel handler - export app directly
+# Vercel automatically detects ASGI apps (FastAPI)
 
