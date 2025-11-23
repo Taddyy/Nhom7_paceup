@@ -5,15 +5,24 @@ import sys
 import os
 import traceback
 
+# Print immediately to ensure we see something
+print("STARTING api/index.py", file=sys.stderr, flush=True)
+print("STARTING api/index.py", flush=True)  # Also to stdout
+
 # Wrap everything in try-except to catch any error
 try:
-    # Ensure all output goes to stderr for Vercel logs
+    # Ensure all output goes to both stderr and stdout for maximum visibility
     def log(msg):
-        """Log to stderr for Vercel visibility"""
+        """Log to both stderr and stdout for Vercel visibility"""
         try:
             print(msg, file=sys.stderr, flush=True)
-        except:
-            pass  # If even logging fails, continue
+            print(msg, flush=True)  # Also stdout
+        except Exception as e:
+            # If even logging fails, try basic print
+            try:
+                print(f"LOG_ERROR: {e}", flush=True)
+            except:
+                pass
     
     # Debug: Print environment info
     log("=== Vercel Python Function Startup ===")
@@ -161,11 +170,17 @@ except Exception as e:
    Traceback:
 {traceback.format_exc()}
 """
+    # Print to both stderr and stdout
     try:
         print(error_msg, file=sys.stderr, flush=True)
+        print(error_msg, flush=True)  # Also stdout
     except:
         # If even printing fails, try basic print
-        print(f"CRITICAL ERROR: {e}", flush=True)
+        try:
+            print(f"CRITICAL ERROR: {e}", file=sys.stderr, flush=True)
+            print(f"CRITICAL ERROR: {e}", flush=True)
+        except:
+            pass
     # Re-raise to ensure Vercel sees the error
     raise
 
