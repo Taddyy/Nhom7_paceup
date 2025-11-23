@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import EventCard from '@/components/events/EventCard'
 import CTASection from '@/components/home/CTASection'
-import { FALLBACK_EVENT_LIST } from '@/lib/data/fallbackEvents'
+import { FALLBACK_EVENT_LIST } from '@/lib/data/fallback-events'
 
 type EventItem = {
   id: string
