@@ -184,21 +184,27 @@ except Exception as e:
 
 # Export app and handler at module level (outside try-except)
 # Vercel automatically detects ASGI apps when 'app' is exported at module level
-# Also export handler function for explicit handling
-# Vercel will try to use handler first, then fall back to app
-if 'app' in globals() and 'handler' in globals():
-    __all__ = ['app', 'handler']
-elif 'app' in globals():
-    # If only app is defined, export it and create a simple handler
-    try:
-        from mangum import Mangum
-        handler = Mangum(app, lifespan="off")
+# According to Vercel docs, FastAPI apps are auto-detected, so we primarily export 'app'
+# The handler is a fallback for explicit handling
+if 'app' in globals():
+    # Always export app - Vercel will auto-detect it as ASGI
+    if 'handler' not in globals():
+        # If handler not created, try to create it
+        try:
+            from mangum import Mangum
+            handler = Mangum(app, lifespan="off")
+        except ImportError:
+            # If Mangum not available, just export app
+            pass
+    
+    # Export both if available, otherwise just app
+    if 'handler' in globals():
         __all__ = ['app', 'handler']
-    except ImportError:
+    else:
         __all__ = ['app']
 else:
-    # If app is not defined, something went wrong
-    # But we can't raise here or Vercel won't even try to load the function
-    # So we'll let Vercel show the error from the try-except above
+    # If app is not defined, something went wrong during initialization
+    # The error should have been logged in the try-except above
+    # We can't export anything, so Vercel will show the error
     pass
 
