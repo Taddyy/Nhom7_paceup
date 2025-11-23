@@ -22,36 +22,68 @@ router = APIRouter()
 @router.post("/login", response_model=AuthResponse)
 async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
     """Login endpoint"""
-    user = db.query(User).filter(User.email == credentials.email).first()
+    import logging
+    logger = logging.getLogger(__name__)
     
-    if not user or not verify_password(credentials.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+    try:
+        logger.info(f"Login attempt for email: {credentials.email}")
+        
+        # Query user from database
+        user = db.query(User).filter(User.email == credentials.email).first()
+        
+        if not user:
+            logger.warning(f"User not found: {credentials.email}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Verify password
+        if not verify_password(credentials.password, user.hashed_password):
+            logger.warning(f"Invalid password for user: {credentials.email}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Check if user is active
+        if user.is_active != "true":
+            logger.warning(f"Inactive user attempted login: {credentials.email}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Inactive user",
+            )
+        
+        # Create access token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.id}, expires_delta=access_token_expires
         )
-    
-    if user.is_active != "true":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user",
+        
+        logger.info(f"Login successful for user: {credentials.email}")
+        
+        return AuthResponse(
+            access_token=access_token,
+            token_type="bearer",
+            user={
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "role": user.role  # Include role in response
+            },
         )
-    
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.id}, expires_delta=access_token_expires
-    )
-    
-    return AuthResponse(
-        access_token=access_token,
-        token_type="bearer",
-        user={
-            "id": user.id,
-            "email": user.email,
-            "full_name": user.full_name,
-            "role": user.role  # Include role in response
-        },
-    )
+    except HTTPException:
+        # Re-raise HTTP exceptions (401, 403, etc.)
+        raise
+    except Exception as e:
+        # Log unexpected errors
+        logger.error(f"Unexpected error during login: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 
 @router.post("/register", response_model=AuthResponse)
