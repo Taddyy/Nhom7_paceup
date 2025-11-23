@@ -207,9 +207,6 @@ export default function LoginPage() {
                     onChange={handleChange}
                     className={`${sharedInputClasses} pr-14`}
                     autoComplete="current-password"
-                    style={{
-                      WebkitTextSecurity: isPasswordVisible ? 'none' : 'disc',
-                    }}
                   />
                   <button
                     type="button"
