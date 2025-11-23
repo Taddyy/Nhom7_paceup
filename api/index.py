@@ -115,6 +115,7 @@ except ImportError:
     print("⚠️ Mangum not available, exporting app directly", file=sys.stderr)
     handler = app
 
-# Export both handler and app for maximum compatibility
-# Vercel will use whichever it detects first
+# Export app for Vercel
+# Vercel automatically detects ASGI apps when 'app' is exported at module level
+# This is the standard way for Vercel to handle FastAPI
 
