@@ -1,5 +1,6 @@
 """
 Vercel Serverless Function entry point for FastAPI
+Updated: 2025-11-23 - Force redeploy
 """
 import sys
 import os
