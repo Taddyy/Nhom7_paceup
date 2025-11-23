@@ -1,14 +1,18 @@
-# Test minimal - Cực kỳ đơn giản để test Python runtime
-# Không import gì, không function, chỉ print
+# Test minimal - Flask format (Vercel auto-detect)
+from flask import Flask, jsonify
 
-print("TEST MINIMAL: Python runtime is working!", flush=True)
-print("TEST MINIMAL: This file should be executed when imported", flush=True)
+print("TEST MINIMAL: Flask app being created", flush=True)
 
-# Export handler function cho Vercel
-def handler(event, context):
-    return {
-        "statusCode": 200,
-        "headers": {"Content-Type": "application/json"},
-        "body": '{"status": "ok", "message": "Minimal test working"}'
-    }
+# Tạo Flask app - Vercel tự động nhận diện
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    return jsonify({
+        "status": "ok",
+        "message": "Minimal Flask test working",
+        "format": "Flask App (auto-detect)"
+    })
+
+print("TEST MINIMAL: Flask app created successfully", flush=True)
 

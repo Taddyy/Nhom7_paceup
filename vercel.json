@@ -6,6 +6,18 @@
   },
   "rewrites": [
     {
+      "source": "/api/test-vercel-spec",
+      "destination": "/api/test-vercel-spec"
+    },
+    {
+      "source": "/api/test-flask-simple",
+      "destination": "/api/test-flask-simple"
+    },
+    {
+      "source": "/api/debug-flask",
+      "destination": "/api/debug-flask"
+    },
+    {
       "source": "/api/test-minimal",
       "destination": "/api/test-minimal"
     },
