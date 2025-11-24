@@ -1,6 +1,7 @@
 """
 Vercel Serverless Function entry point for FastAPI
 Simplified version with clear error trapping
+Reverted to working version - commit 4105e12
 """
 import sys
 import os
