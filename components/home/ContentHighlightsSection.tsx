@@ -289,7 +289,6 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
   const [videoPreviews, setVideoPreviews] = useState<CommentAttachment[]>([])
   const [commentList, setCommentList] = useState<ArticleComment[]>(article.comments)
   const COMMENTS_PER_VIEW = 2
-  const [commentPage, setCommentPage] = useState(0)
   
   // Report and hide states
   const [isReportOpen, setIsReportOpen] = useState(false)
@@ -297,10 +296,6 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
   const [reportReasons, setReportReasons] = useState<string[]>([])
   const [reportDescription, setReportDescription] = useState('')
   const reportRef = useRef<HTMLDivElement>(null)
-  
-  useEffect(() => {
-    setCommentPage(0)
-  }, [commentList.length])
 
   const [activeSlide, setActiveSlide] = useState(0)
   const imageInputRef = useRef<HTMLInputElement>(null)
@@ -756,9 +751,58 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
 
       {hasComments && (
         <div className="flex flex-col gap-3 mt-3">
-          {commentList
-            .slice(commentPage * COMMENTS_PER_VIEW, commentPage * COMMENTS_PER_VIEW + COMMENTS_PER_VIEW)
-            .map((comment) => {
+          {commentList.length <= COMMENTS_PER_VIEW ? (
+            // Nếu có 2 comments trở xuống, hiển thị tất cả không cần scroll
+            // Đảo ngược để comment mới nhất ở dưới cùng
+            [...commentList].reverse().map((comment) => {
+              const legacyAttachments =
+                comment.attachment && !comment.media
+                  ? [{ id: `${comment.id}-attachment`, type: 'image' as const, url: comment.attachment }]
+                  : []
+              const attachments = comment.media ?? legacyAttachments
+              return (
+                <div key={comment.id} className="flex gap-3 rounded-[24px] bg-[#f8f8fb] p-4">
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                    <Image src={comment.avatar} alt={comment.author} fill sizes="40px" className="object-cover" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-sm text-neutral-900">{comment.author}</p>
+                      <span className="text-xs text-neutral-500">{comment.timestamp}</span>
+                    </div>
+                    <p className="text-sm text-neutral-600 mt-1 whitespace-pre-line">{comment.content}</p>
+                    {attachments.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-3">
+                        {attachments.map((attachment) =>
+                          attachment.type === 'video' ? (
+                            <video
+                              key={attachment.id}
+                              src={attachment.url}
+                              className="h-[140px] w-[140px] rounded-2xl object-cover"
+                              controls
+                              muted
+                            />
+                          ) : (
+                            <img
+                              key={attachment.id}
+                              src={attachment.url}
+                              alt={`${comment.author} attachment`}
+                              className="h-[120px] w-[120px] aspect-square rounded-2xl object-cover"
+                              loading="lazy"
+                            />
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })
+          ) : (
+            // Nếu có nhiều hơn 2 comments, hiển thị với scrollbar
+            // Đảo ngược để comment mới nhất ở dưới cùng
+            <div className="max-h-[400px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+              {[...commentList].reverse().map((comment) => {
                 const legacyAttachments =
                   comment.attachment && !comment.media
                     ? [{ id: `${comment.id}-attachment`, type: 'image' as const, url: comment.attachment }]
@@ -802,40 +846,6 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
                   </div>
                 )
               })}
-
-          {commentList.length > COMMENTS_PER_VIEW && (
-            <div className="flex items-center justify-between px-2">
-              <button
-                type="button"
-                onClick={() => setCommentPage((prev) => Math.max(0, prev - 1))}
-                className="rounded-full border border-black/10 p-2 text-xs font-medium text-neutral-600 disabled:opacity-40 disabled:cursor-not-allowed"
-                disabled={commentPage === 0}
-              >
-                Lên
-              </button>
-              <div className="flex items-center gap-2 text-xs text-neutral-500">
-                {Array.from({ length: Math.ceil(commentList.length / COMMENTS_PER_VIEW) }).map((_, index) => (
-                  <button
-                    key={`comment-dot-${index}`}
-                    onClick={() => setCommentPage(index)}
-                    type="button"
-                    className={`h-2.5 w-2.5 rounded-full transition ${
-                      index === commentPage ? 'bg-neutral-900' : 'bg-neutral-300'
-                    }`}
-                    aria-label={`Xem trang bình luận ${index + 1}`}
-                  />
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setCommentPage((prev) => Math.min(Math.ceil(commentList.length / COMMENTS_PER_VIEW) - 1, prev + 1))
-                }
-                className="rounded-full border border-black/10 p-2 text-xs font-medium text-neutral-600 disabled:opacity-40 disabled:cursor-not-allowed"
-                disabled={commentPage >= Math.ceil(commentList.length / COMMENTS_PER_VIEW) - 1}
-              >
-                Xuống
-              </button>
             </div>
           )}
         </div>
