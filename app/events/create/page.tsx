@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useForm, useFieldArray, Control } from 'react-hook-form'
 import Link from 'next/link'
 import Toast from '@/components/ui/Toast'
-import { type CreateEventRequest } from '@/lib/api/events'
+import { type CreateEventRequest, createEvent } from '@/lib/api/events'
 
 import RouteSelector from '@/components/events/RouteSelector'
 
@@ -96,13 +96,18 @@ export default function CreateEventPage() {
         hydration_points: data.hydration_points ? Number(data.hydration_points) : 0,
       }
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Call API to create event
+      await createEvent(formattedData)
       
-      router.push('/?action=create_event_success')
+      setShowToast(true)
+      setTimeout(() => {
+        router.push('/events')
+      }, 1500)
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create event', error)
+      setShowToast(true)
+      alert(error?.response?.data?.detail || 'Có lỗi xảy ra khi tạo sự kiện. Vui lòng thử lại.')
     } finally {
       setIsSubmitting(false)
     }
@@ -110,6 +115,12 @@ export default function CreateEventPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FB] pt-[120px] pb-20">
+      <Toast 
+        message={showToast ? 'Tạo sự kiện thành công!' : ''}
+        type="success"
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+      />
       <div className="mx-auto max-w-[800px] px-4">
         <div className="mb-8">
           <Link 
@@ -445,26 +456,35 @@ export default function CreateEventPage() {
                 <div className="col-span-2">
                   <label className="mb-2 block text-sm font-medium text-neutral-700">Thông tin tài khoản thụ hưởng (Của bạn)</label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <input
-                      value="TP Bank"
-                      disabled
-                      className="w-full rounded-[12px] border border-neutral-200 px-4 py-3 outline-none bg-neutral-100 text-neutral-500 cursor-not-allowed"
-                    />
-                    <input
-                      value="0484 0606 101"
-                      disabled
-                      className="w-full rounded-[12px] border border-neutral-200 px-4 py-3 outline-none bg-neutral-100 text-neutral-500 cursor-not-allowed"
-                    />
-                    <input
-                      value="Lưu Quang Đạt"
-                      disabled
-                      className="w-full rounded-[12px] border border-neutral-200 px-4 py-3 outline-none bg-neutral-100 text-neutral-500 cursor-not-allowed"
-                    />
+                    <div>
+                      <input
+                        {...register('bank_name')}
+                        placeholder="Tên ngân hàng"
+                        className="w-full rounded-[12px] border border-neutral-200 px-4 py-3 outline-none text-[#000] placeholder:text-neutral-400 focus:text-[#212121] focus:border-[#1c1c1c] focus:ring-1 focus:ring-[#1c1c1c] transition-all"
+                      />
+                      {errors.bank_name && <p className="mt-1 text-sm text-red-500">{errors.bank_name.message}</p>}
+                    </div>
+                    <div>
+                      <input
+                        {...register('account_number')}
+                        placeholder="Số tài khoản"
+                        className="w-full rounded-[12px] border border-neutral-200 px-4 py-3 outline-none text-[#000] placeholder:text-neutral-400 focus:text-[#212121] focus:border-[#1c1c1c] focus:ring-1 focus:ring-[#1c1c1c] transition-all"
+                      />
+                      {errors.account_number && <p className="mt-1 text-sm text-red-500">{errors.account_number.message}</p>}
+                    </div>
+                    <div>
+                      <input
+                        {...register('account_holder_name')}
+                        placeholder="Tên chủ tài khoản"
+                        className="w-full rounded-[12px] border border-neutral-200 px-4 py-3 outline-none text-[#000] placeholder:text-neutral-400 focus:text-[#212121] focus:border-[#1c1c1c] focus:ring-1 focus:ring-[#1c1c1c] transition-all"
+                      />
+                      {errors.account_holder_name && <p className="mt-1 text-sm text-red-500">{errors.account_holder_name.message}</p>}
+                    </div>
                   </div>
                   <p className="mt-2 text-xs text-neutral-500">
-                    * Đây là tài khoản mặc định của hệ thống PaceUp để nhận tiền từ người dùng. 
+                    * Nhập thông tin tài khoản ngân hàng của bạn để nhận tiền thanh toán từ người tham gia.
                     <br/>
-                    * Cú pháp chuyển khoản tự động: <strong>PACEUP [MÃ_ĐƠN_HÀNG]</strong>
+                    * Thông tin này sẽ được lưu cùng với sự kiện và admin sẽ sử dụng để chuyển khoản sau khi kết thúc giải chạy.
                   </p>
                 </div>
               </div>

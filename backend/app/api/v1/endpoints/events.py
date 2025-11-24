@@ -67,6 +67,9 @@ async def get_events(
             organizer_id=event.organizer_id,
             organizer_name=organizer.full_name if organizer else "Unknown",
             participants_count=participants_count,
+            bank_name=event.bank_name,
+            account_number=event.account_number,
+            account_holder_name=event.account_holder_name,
             created_at=event.created_at,
             updated_at=event.updated_at,
         ))
@@ -111,6 +114,9 @@ async def get_event(event_id: str, db: Session = Depends(get_db)):
         organizer_id=event.organizer_id,
         organizer_name=organizer.full_name if organizer else "Unknown",
         participants_count=participants_count,
+        bank_name=event.bank_name,
+        account_number=event.account_number,
+        account_holder_name=event.account_holder_name,
         created_at=event.created_at,
         updated_at=event.updated_at,
     )
@@ -146,6 +152,9 @@ async def create_event(
         registration_deadline=event_data.registration_deadline,
         categories=event_data.categories,
         organizer_id=user_id,
+        bank_name=event_data.bank_name,
+        account_number=event_data.account_number,
+        account_holder_name=event_data.account_holder_name,
     )
     
     db.add(new_event)
@@ -170,6 +179,9 @@ async def create_event(
         organizer_id=new_event.organizer_id,
         organizer_name=organizer.full_name if organizer else "Unknown",
         participants_count=0,
+        bank_name=new_event.bank_name,
+        account_number=new_event.account_number,
+        account_holder_name=new_event.account_holder_name,
         created_at=new_event.created_at,
         updated_at=new_event.updated_at,
     )
@@ -234,6 +246,9 @@ async def update_event(
         organizer_id=event.organizer_id,
         organizer_name=organizer.full_name if organizer else "Unknown",
         participants_count=participants_count,
+        bank_name=event.bank_name,
+        account_number=event.account_number,
+        account_holder_name=event.account_holder_name,
         created_at=event.created_at,
         updated_at=event.updated_at,
     )

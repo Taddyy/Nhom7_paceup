@@ -337,6 +337,7 @@ export default function AdminDashboard() {
                       <th className="py-3 px-4">Ban tổ chức</th>
                       <th className="py-3 px-4">Địa điểm</th>
                       <th className="py-3 px-4">Ngày diễn ra</th>
+                      <th className="py-3 px-4">Tài khoản nhận tiền</th>
                       <th className="py-3 px-4 text-right">Hành động</th>
                     </tr>
                   </thead>
@@ -348,6 +349,17 @@ export default function AdminDashboard() {
                           <td className="py-4 px-4 text-gray-600">{event.organizer_name}</td>
                           <td className="py-4 px-4 text-gray-600 max-w-xs truncate">{event.location}</td>
                           <td className="py-4 px-4 text-gray-500 text-sm">{new Date(event.date).toLocaleDateString('vi-VN')}</td>
+                          <td className="py-4 px-4 text-gray-600 text-sm">
+                            {event.bank_name && event.account_number && event.account_holder_name ? (
+                              <div className="space-y-1">
+                                <div className="font-medium">{event.bank_name}</div>
+                                <div className="text-gray-500">{event.account_number}</div>
+                                <div className="text-gray-500">{event.account_holder_name}</div>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 italic">Chưa có thông tin</span>
+                            )}
+                          </td>
                           <td className="py-4 px-4 text-right space-x-2">
                             <button 
                               onClick={() => window.open(`/events/${event.id}`, '_blank')}
@@ -372,7 +384,7 @@ export default function AdminDashboard() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-gray-500">Không có sự kiện nào chờ duyệt.</td>
+                        <td colSpan={6} className="py-8 text-center text-gray-500">Không có sự kiện nào chờ duyệt.</td>
                       </tr>
                     )}
                   </tbody>

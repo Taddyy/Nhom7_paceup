@@ -19,6 +19,10 @@ class EventBase(BaseModel):
     max_participants: int
     registration_deadline: datetime
     categories: List[str]
+    # Bank account information
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    account_holder_name: Optional[str] = None
 
 
 class EventCreate(EventBase):
@@ -39,6 +43,10 @@ class EventUpdate(BaseModel):
     max_participants: Optional[int] = None
     registration_deadline: Optional[datetime] = None
     categories: Optional[List[str]] = None
+    # Bank account information
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    account_holder_name: Optional[str] = None
 
 
 class EventResponse(EventBase):

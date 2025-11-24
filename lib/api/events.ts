@@ -22,6 +22,9 @@ export interface Event {
   categories: string[]
   organizer_id: string
   organizer_name: string
+  bank_name?: string
+  account_number?: string
+  account_holder_name?: string
   created_at: string
   updated_at: string
 }
@@ -38,6 +41,10 @@ export interface CreateEventRequest {
   max_participants: number
   registration_deadline: string
   categories: string[]
+  // Bank account information
+  bank_name?: string
+  account_number?: string
+  account_holder_name?: string
   // New fields for "Event Detail" parity
   badges?: string[]
   route_map_url?: string

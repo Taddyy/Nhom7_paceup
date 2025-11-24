@@ -25,6 +25,10 @@ class Event(Base):
     categories = Column(JSON, nullable=False)  # MySQL uses JSON instead of ARRAY
     status = Column(String(20), default="pending")  # pending, approved, rejected
     organizer_id = Column(String(255), ForeignKey("users.id"), nullable=False)
+    # Bank account information for payment processing
+    bank_name = Column(String(255), nullable=True)  # Tên ngân hàng
+    account_number = Column(String(100), nullable=True)  # Số tài khoản
+    account_holder_name = Column(String(255), nullable=True)  # Tên chủ tài khoản
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
 

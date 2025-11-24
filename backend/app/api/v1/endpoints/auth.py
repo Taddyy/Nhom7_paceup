@@ -337,6 +337,9 @@ async def get_joined_events(
             organizer_id=event.organizer_id,
             organizer_name=organizer.full_name if organizer else "Unknown",
             participants_count=participants_count,
+            bank_name=event.bank_name,
+            account_number=event.account_number,
+            account_holder_name=event.account_holder_name,
             created_at=event.created_at,
             updated_at=event.updated_at,
         ))
