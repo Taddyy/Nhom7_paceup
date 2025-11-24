@@ -320,9 +320,9 @@ export default function EventRegistrationStepTwoPage() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-4 rounded-[24px] border border-neutral-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 rounded-[24px] border border-neutral-200 bg-white p-6 shadow-sm items-center">
             {CONSENT_ITEMS.map((consent) => (
-              <label key={consent.id} className="flex items-start gap-4 text-sm text-neutral-700">
+              <label key={consent.id} className="flex items-center gap-4 text-sm text-neutral-700 justify-center w-full">
                 <span
                   role="checkbox"
                   aria-checked={consents[consent.id]}
@@ -334,7 +334,7 @@ export default function EventRegistrationStepTwoPage() {
                       toggleConsent(consent.id)
                     }
                   }}
-                  className={`mt-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-2 transition ${
+                  className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-2 transition ${
                     consents[consent.id]
                       ? 'border-[#1f1f1f] bg-[#1f1f1f]'
                       : 'border-neutral-300 bg-white'
@@ -344,13 +344,13 @@ export default function EventRegistrationStepTwoPage() {
                     <Image src="/Icon/check.svg" alt="Đã chọn" width={18} height={18} />
                   )}
                 </span>
-                <span>
+                <span className="text-center">
                   {consent.label}{' '}
                   {consent.required && <span className="text-neutral-400">(bắt buộc)</span>}
                 </span>
               </label>
             ))}
-            {consentError && <p className="text-sm text-red-500">{consentError}</p>}
+            {consentError && <p className="text-sm text-red-500 text-center">{consentError}</p>}
           </div>
 
           <div className="rounded-[24px] border border-neutral-200 bg-white/80 p-6 shadow-lg backdrop-blur-lg">
