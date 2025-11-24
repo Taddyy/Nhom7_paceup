@@ -52,8 +52,22 @@ try:
     db_name = extract_database_name(settings.DATABASE_URL)
     logger.info(f"Initializing database connection to database: '{db_name}'")
     
+    # Validate DATABASE_URL format - must use mysql+pymysql:// for pymysql driver
+    db_url = settings.DATABASE_URL
+    if not db_url.startswith("mysql+pymysql://"):
+        if db_url.startswith("mysql://"):
+            # Replace mysql:// with mysql+pymysql://
+            db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
+            logger.warning(f"DATABASE_URL format corrected: changed mysql:// to mysql+pymysql://")
+        else:
+            logger.error(f"Invalid DATABASE_URL format. Must start with mysql+pymysql://")
+            logger.error(f"DATABASE_URL starts with: {db_url[:20]}...")
+            raise ValueError(f"Invalid DATABASE_URL format. Must start with 'mysql+pymysql://'")
+    
+    logger.info(f"Using DATABASE_URL format: {db_url[:30]}... (truncated for security)")
+    
     engine = create_engine(
-        settings.DATABASE_URL,
+        db_url,
         pool_pre_ping=True,
         pool_recycle=3600,
         echo=False,
