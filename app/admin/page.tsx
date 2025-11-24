@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getAdminStats, getAdminPosts, updatePostStatus, getAdminEvents, updateEventStatus, type AdminStats } from '@/lib/api/admin'
-import { getCurrentUser } from '@/lib/api/auth-service'
+import { getCurrentUser, logout } from '@/lib/api/auth-service'
 import type { BlogPost } from '@/lib/api/blog-service'
 import type { Event } from '@/lib/api/events'
 import Toast from '@/components/ui/Toast'
@@ -185,6 +185,11 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleLogout = () => {
+    logout()
+    router.push('/login')
+  }
+
   if (isLoading && !stats) return <div className="min-h-screen pt-20 flex justify-center">Đang tải...</div>
 
   return (
@@ -204,30 +209,41 @@ export default function AdminDashboard() {
 
         {/* Tabs */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8 overflow-hidden">
-          <div className="flex border-b border-gray-200">
+          <div className="flex justify-between items-center border-b border-gray-200">
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`px-6 py-4 font-medium transition-colors ${activeTab === 'overview' ? 'text-black border-b-2 border-black bg-gray-50' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Tổng quan
+              </button>
+              <button
+                onClick={() => setActiveTab('posts')}
+                className={`px-6 py-4 font-medium transition-colors ${activeTab === 'posts' ? 'text-black border-b-2 border-black bg-gray-50' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Duyệt bài viết <span className="ml-2 bg-red-100 text-red-600 text-xs py-0.5 px-2 rounded-full">{stats?.pending_posts || 0}</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('events')}
+                className={`px-6 py-4 font-medium transition-colors ${activeTab === 'events' ? 'text-black border-b-2 border-black bg-gray-50' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Duyệt sự kiện <span className="ml-2 bg-red-100 text-red-600 text-xs py-0.5 px-2 rounded-full">{stats?.pending_events || 0}</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('reports')}
+                className={`px-6 py-4 font-medium transition-colors ${activeTab === 'reports' ? 'text-black border-b-2 border-black bg-gray-50' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Báo cáo
+              </button>
+            </div>
             <button
-              onClick={() => setActiveTab('overview')}
-              className={`px-6 py-4 font-medium transition-colors ${activeTab === 'overview' ? 'text-black border-b-2 border-black bg-gray-50' : 'text-gray-500 hover:bg-gray-50'}`}
+              onClick={handleLogout}
+              className="px-4 py-2 mx-4 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
             >
-              Tổng quan
-            </button>
-            <button
-              onClick={() => setActiveTab('posts')}
-              className={`px-6 py-4 font-medium transition-colors ${activeTab === 'posts' ? 'text-black border-b-2 border-black bg-gray-50' : 'text-gray-500 hover:bg-gray-50'}`}
-            >
-              Duyệt bài viết <span className="ml-2 bg-red-100 text-red-600 text-xs py-0.5 px-2 rounded-full">{stats?.pending_posts || 0}</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('events')}
-              className={`px-6 py-4 font-medium transition-colors ${activeTab === 'events' ? 'text-black border-b-2 border-black bg-gray-50' : 'text-gray-500 hover:bg-gray-50'}`}
-            >
-              Duyệt sự kiện <span className="ml-2 bg-red-100 text-red-600 text-xs py-0.5 px-2 rounded-full">{stats?.pending_events || 0}</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('reports')}
-              className={`px-6 py-4 font-medium transition-colors ${activeTab === 'reports' ? 'text-black border-b-2 border-black bg-gray-50' : 'text-gray-500 hover:bg-gray-50'}`}
-            >
-              Báo cáo
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Đăng xuất
             </button>
           </div>
 
