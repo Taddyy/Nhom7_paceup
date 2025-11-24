@@ -73,6 +73,10 @@ export default function ContentPage() {
     // Placeholder for future fetch
   }, [])
 
+  const handleArticleAdded = (newArticle: ArticleHighlight) => {
+    setArticles(prev => [newArticle, ...prev])
+  }
+
   return (
     <div className="flex flex-col bg-white">
       <div className="pt-[140px] pb-16">
@@ -85,7 +89,12 @@ export default function ContentPage() {
             </p>
           </header>
 
-          <ContentHighlightsSection posts={posts} articles={articles} showCreateButton={true} />
+          <ContentHighlightsSection 
+            posts={posts} 
+            articles={articles} 
+            showCreateButton={true}
+            onArticleAdded={handleArticleAdded}
+          />
         </div>
       </div>
 

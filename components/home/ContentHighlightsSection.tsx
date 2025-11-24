@@ -4,6 +4,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createBlogPost } from '@/lib/api/blog-service'
+import RichTextEditor from '@/components/ui/RichTextEditor'
 
 export interface ContentHighlight {
   id: string
@@ -53,6 +55,7 @@ interface ContentHighlightsSectionProps {
   posts: ContentHighlight[]
   articles: ArticleHighlight[]
   showCreateButton?: boolean
+  onArticleAdded?: (article: ArticleHighlight) => void
 }
 
 type ContentTab = 'articles' | 'blog'
@@ -164,8 +167,9 @@ const searchGifs = async (query: string): Promise<GifResult[]> => {
 /**
  * Content showcase mirroring the "Nội Dung Mới Nhất" section from Figma.
  */
-export default function ContentHighlightsSection({ posts, articles, showCreateButton }: ContentHighlightsSectionProps) {
+export default function ContentHighlightsSection({ posts, articles, showCreateButton, onArticleAdded }: ContentHighlightsSectionProps) {
   const [activeTab, setActiveTab] = useState<ContentTab>('blog')
+  const [localArticles, setLocalArticles] = useState<ArticleHighlight[]>(articles)
 
   const tabButtonClass = (tab: ContentTab): string =>
     [
@@ -186,17 +190,25 @@ export default function ContentHighlightsSection({ posts, articles, showCreateBu
           </button>
         </div>
 
-        {showCreateButton && (
-          <div className="flex justify-center">
-            <Link
-              href="/content/create"
-              className="bg-[#1c1c1c] flex items-center justify-center px-6 py-3 rounded-xl shadow-[inset_-4px_-4px_4px_0px_rgba(0,0,0,0.4),inset_4px_4px_6px_0px_rgba(255,255,255,0.15)] hover:opacity-90 transition-opacity"
-            >
-              <span className="font-bold text-base text-white uppercase whitespace-nowrap">
-                Tạo blog ngay
-              </span>
-            </Link>
-          </div>
+        {showCreateButton && activeTab === 'blog' && (
+          <BlogComposer 
+            onPostCreated={() => {
+              // Refresh posts list after successful creation
+              window.location.reload()
+            }}
+          />
+        )}
+
+        {showCreateButton && activeTab === 'articles' && (
+          <ArticleComposer 
+            onArticleCreated={(newArticle) => {
+              // Add new article to local state
+              setLocalArticles(prev => [newArticle, ...prev])
+              if (onArticleAdded) {
+                onArticleAdded(newArticle)
+              }
+            }}
+          />
         )}
 
         {activeTab === 'blog' ? (
@@ -242,7 +254,7 @@ export default function ContentHighlightsSection({ posts, articles, showCreateBu
         ) : (
           <div className="flex flex-col gap-8 w-full">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {articles.map((article) => (
+              {localArticles.map((article) => (
                 <ArticleCard key={article.id} article={article} />
               ))}
             </div>
@@ -476,7 +488,7 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
             {limitedMedia.map((imageSrc) => (
               <div
                 key={`${article.id}-${imageSrc}`}
-                className="relative h-[260px] w-full flex-shrink-0 snap-center rounded-[24px] overflow-hidden"
+                className="relative aspect-square w-full flex-shrink-0 snap-center rounded-[24px] overflow-hidden"
               >
                 <Image
                   src={imageSrc}
@@ -580,7 +592,7 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
                             key={attachment.id}
                             src={attachment.url}
                             alt={`${comment.author} attachment`}
-                            className="h-[120px] w-[120px] rounded-2xl object-cover"
+                            className="h-[120px] w-[120px] aspect-square rounded-2xl object-cover"
                             loading="lazy"
                           />
                         )
@@ -770,5 +782,737 @@ const HeartIcon = ({ filled }: { filled: boolean }) => (
     />
   </svg>
 )
+
+/**
+ * Article Composer - Inline editor for creating articles (Bài viết tab)
+ * Based on Figma design node-id 214:554
+ */
+function ArticleComposer({ onArticleCreated }: { onArticleCreated?: (article: ArticleHighlight) => void }) {
+  const [caption, setCaption] = useState('')
+  const [title, setTitle] = useState('')
+  const [media, setMedia] = useState<Array<{ id: string; type: 'image' | 'video' | 'gif'; url: string; preview?: string }>>([])
+  const [isGifPickerOpen, setGifPickerOpen] = useState(false)
+  const [isEmojiPickerOpen, setEmojiPickerOpen] = useState(false)
+  const [emojiSearchQuery, setEmojiSearchQuery] = useState('')
+  const [selectedEmojiCategory, setSelectedEmojiCategory] = useState<string>('smileys')
+  const [gifResults, setGifResults] = useState<GifResult[]>([])
+  const [isLoadingGifs, setIsLoadingGifs] = useState(false)
+  const [gifQuery, setGifQuery] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const emojiScrollRef = useRef<HTMLDivElement>(null)
+
+  // Emoji categories and data (Apple-style emojis)
+  const emojiCategories = {
+    smileys: {
+      name: 'Người',
+      icon: '😀',
+      emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '😶‍🌫️', '😵', '😵‍💫', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐']
+    },
+    people: {
+      name: 'Cử chỉ',
+      icon: '👋',
+      emojis: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃']
+    },
+    animals: {
+      name: 'Động vật',
+      icon: '🐶',
+      emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🕸️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛']
+    },
+    food: {
+      name: 'Đồ ăn',
+      icon: '🍎',
+      emojis: ['🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🌽', '🥕', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🥞', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🥪', '🥙', '🌮', '🌯', '🥗', '🥘', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '🫖', '☕', '🍵', '🧃', '🥤', '🧋', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊']
+    },
+    activities: {
+      name: 'Hoạt động',
+      icon: '⚽',
+      emojis: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🥅', '⛳', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🏋️', '🤼', '🤸', '⛹️', '🤺', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹', '🎭', '🩰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🪘', '🎷', '🎺', '🪗', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🎰', '🧩']
+    },
+    objects: {
+      name: 'Đồ vật',
+      icon: '⌚',
+      emojis: ['⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '💎', '⚖️', '🪜', '🧰', '🪛', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🪚', '🔩', '⚙️', '🪤', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '🪦', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️']
+    },
+    travel: {
+      name: 'Du lịch',
+      icon: '🚗',
+      emojis: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🛴', '🚲', '🛵', '🏍️', '🛺', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡', '🚠', '🚟', '🚃', '🚋', '🚞', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '✈️', '🛫', '🛬', '🛩️', '💺', '🚁', '🚟', '🚀', '🛸', '🚤', '🛥️', '🛳️', '⛴️', '🚢', '⚓', '⛵', '🛶', '🚤', '🛟', '🚧', '⛽', '🚏', '🗺️', '🗿', '🗽', '🗼', '🏰', '🏯', '🏟️', '🎡', '🎢', '🎠', '⛲', '⛱️', '🏖️', '🏝️', '🏜️', '🌋', '⛰️', '🏔️', '🗻', '🏕️', '⛺', '🛖', '🏠', '🏡', '🏘️', '🏚️', '🏗️', '🏭', '🏢', '🏬', '🏣', '🏤', '🏥', '🏦', '🏨', '🏪', '🏫', '🏩', '💒', '🏛️', '⛪', '🕌', '🛕', '🕍', '⛩️', '🕋']
+    },
+    symbols: {
+      name: 'Biểu tượng',
+      icon: '❤️',
+      emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❓', '❕', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🈳', '🈂️', '🛂', '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤', '🔡', '🔠', '🔢']
+    }
+  }
+
+  // Get filtered emojis based on search and category
+  const getFilteredEmojis = () => {
+    const categoryEmojis = emojiCategories[selectedEmojiCategory as keyof typeof emojiCategories]?.emojis || []
+    
+    if (!emojiSearchQuery.trim()) {
+      return categoryEmojis
+    }
+    
+    // Simple search - filter emojis (you can enhance this with emoji name search)
+    const query = emojiSearchQuery.toLowerCase()
+    return categoryEmojis.filter(emoji => emoji.includes(query) || query.length === 0)
+  }
+
+  const generateId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+  const loadTrendingGifs = useCallback(async () => {
+    try {
+      setIsLoadingGifs(true)
+      const results = await fetchTrendingGifs()
+      setGifResults(results)
+    } catch (error) {
+      console.error('Không thể tải GIF', error)
+    } finally {
+      setIsLoadingGifs(false)
+    }
+  }, [])
+
+  const handleGifSearch = useCallback(async () => {
+    const trimmedQuery = gifQuery.trim()
+    if (!trimmedQuery) {
+      await loadTrendingGifs()
+      return
+    }
+    try {
+      setIsLoadingGifs(true)
+      const results = await searchGifs(trimmedQuery)
+      setGifResults(results)
+    } catch (error) {
+      console.error('Không thể tìm GIF', error)
+      setGifResults([])
+    } finally {
+      setIsLoadingGifs(false)
+    }
+  }, [gifQuery, loadTrendingGifs])
+
+  const handleGifToggle = useCallback(() => {
+    const nextState = !isGifPickerOpen
+    setGifPickerOpen(nextState)
+    setEmojiPickerOpen(false) // Close emoji picker when opening GIF picker
+    if (nextState && gifResults.length === 0 && !isLoadingGifs) {
+      void loadTrendingGifs()
+    }
+  }, [gifResults.length, isGifPickerOpen, isLoadingGifs, loadTrendingGifs])
+
+  const handleEmojiToggle = useCallback(() => {
+    setEmojiPickerOpen(prev => !prev)
+    setGifPickerOpen(false) // Close GIF picker when opening emoji picker
+  }, [])
+
+  const insertEmoji = (emoji: string) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const text = caption
+    const newText = text.substring(0, start) + emoji + text.substring(end)
+    
+    setCaption(newText)
+    setEmojiPickerOpen(false)
+    
+    // Set cursor position after emoji
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + emoji.length, start + emoji.length)
+    }, 0)
+  }
+
+  const handleSelectGif = (gif: GifResult) => {
+    setMedia(prev => [...prev, {
+      id: generateId(),
+      type: 'gif',
+      url: gif.url,
+      preview: gif.previewUrl
+    }])
+    setGifPickerOpen(false)
+  }
+
+  const handleMediaChange = (event: ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+    
+    Array.from(files).forEach((file) => {
+      const objectUrl = URL.createObjectURL(file)
+      setMedia(prev => [...prev, {
+        id: generateId(),
+        type,
+        url: objectUrl,
+        preview: objectUrl
+      }])
+    })
+    event.target.value = ''
+  }
+
+  const removeMedia = (id: string) => {
+    setMedia(prev => {
+      const item = prev.find(m => m.id === id)
+      if (item && item.url.startsWith('blob:')) {
+        URL.revokeObjectURL(item.url)
+      }
+      return prev.filter(m => m.id !== id)
+    })
+  }
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!caption.trim() && media.length === 0) {
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      
+      // Generate title from first line of caption or default
+      const firstLine = caption.trim().split('\n')[0]
+      const finalTitle = firstLine || 'Bài viết mới'
+      
+      // Create article object
+      const newArticle: ArticleHighlight = {
+        id: generateId(),
+        author: 'Bạn', // This should come from current user
+        handle: '@user',
+        avatar: '/Image/Run 1.png', // This should come from current user
+        timestamp: 'Vừa xong',
+        title: finalTitle,
+        caption: caption.trim(),
+        media: media.map(m => m.url),
+        comments: [],
+        likes: 0
+      }
+
+      if (onArticleCreated) {
+        onArticleCreated(newArticle)
+      }
+
+      // Reset form
+      setCaption('')
+      setTitle('')
+      setMedia([])
+      setGifPickerOpen(false)
+      setGifQuery('')
+    } catch (error) {
+      console.error('Error creating article:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      // Cleanup blob URLs
+      media.forEach(item => {
+        if (item.url.startsWith('blob:')) {
+          URL.revokeObjectURL(item.url)
+        }
+      })
+    }
+  }, [media])
+
+  return (
+    <div 
+      className="backdrop-blur-[13px] backdrop-filter border border-[rgba(36,36,36,0.12)] border-solid relative rounded-[15px] w-full"
+      style={{ 
+        backgroundImage: "linear-gradient(90deg, rgb(255, 255, 255) 0%, rgb(255, 255, 255) 100%), linear-gradient(rgba(243, 243, 243, 0.5) 0%, rgba(243, 243, 243, 0.12) 100%)" 
+      }}
+    >
+      <form onSubmit={handleSubmit} className="box-border content-stretch flex flex-col gap-[40px] items-start overflow-clip px-[24px] py-[16px] relative rounded-[inherit]">
+        <div className="h-[62px] relative shrink-0 w-full">
+          <textarea
+            ref={textareaRef}
+            value={caption}
+            onChange={(e) => {
+              setCaption(e.target.value)
+              // Auto-generate title from first line
+              const firstLine = e.target.value.trim().split('\n')[0]
+              if (firstLine) {
+                setTitle(firstLine)
+              }
+            }}
+            placeholder="Chia sẻ cảm xúc của bạn"
+            className="w-full h-full resize-none bg-transparent border-none outline-none font-['Inter:Medium',sans-serif] font-medium leading-[1.5] text-[18px] text-[rgba(37,37,37,0.6)] placeholder:text-[rgba(37,37,37,0.6)] focus:text-[rgba(37,37,37,1)]"
+            rows={3}
+          />
+        </div>
+
+        {/* Media Previews - Square format */}
+        {media.length > 0 && (
+          <div className="grid grid-cols-3 gap-3 w-full">
+            {media.map((item) => (
+              <div key={item.id} className="relative aspect-square rounded-xl overflow-hidden group">
+                {item.type === 'video' ? (
+                  <video
+                    src={item.url}
+                    className="w-full h-full object-cover"
+                    muted
+                    loop
+                  />
+                ) : (
+                  <img
+                    src={item.preview || item.url}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeMedia(item.id)}
+                  className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* GIF Picker */}
+        {isGifPickerOpen && (
+          <div className="w-full rounded-2xl border border-black/5 bg-white p-4">
+            <div className="mb-3 flex gap-3">
+              <input
+                type="text"
+                className="flex-1 rounded-xl border border-black/5 px-3 py-2 text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+                placeholder="Tìm kiếm GIF bạn muốn..."
+                value={gifQuery}
+                onChange={(event) => setGifQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    void handleGifSearch()
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800"
+                onClick={() => void handleGifSearch()}
+              >
+                Tìm
+              </button>
+            </div>
+            {isLoadingGifs ? (
+              <p className="text-sm text-neutral-500">Đang tải GIF...</p>
+            ) : gifResults.length === 0 ? (
+              <p className="text-sm text-neutral-500">Không tìm thấy GIF phù hợp.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {gifResults.map((gif) => (
+                  <button
+                    type="button"
+                    key={gif.id}
+                    className="overflow-hidden rounded-2xl border border-transparent transition hover:border-neutral-900/20 aspect-square"
+                    onClick={() => handleSelectGif(gif)}
+                  >
+                    <img src={gif.previewUrl} alt="GIF" className="w-full h-full object-cover" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Emoji Picker */}
+        {isEmojiPickerOpen && (
+          <div className="w-full rounded-2xl border border-black/5 bg-white p-4 flex flex-col">
+            {/* Search bar */}
+            <div className="mb-3">
+              <input
+                type="text"
+                value={emojiSearchQuery}
+                onChange={(e) => setEmojiSearchQuery(e.target.value)}
+                placeholder="Tìm kiếm emoji..."
+                className="w-full rounded-xl border border-black/5 px-3 py-2 text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+              />
+            </div>
+
+            {/* Category tabs */}
+            <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent">
+              {Object.entries(emojiCategories).map(([key, category]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    setSelectedEmojiCategory(key)
+                    setEmojiSearchQuery('')
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${
+                    selectedEmojiCategory === key
+                      ? 'bg-neutral-900 text-white'
+                      : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                  }`}
+                >
+                  <span>{category.icon}</span>
+                  <span>{category.name}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Scrollable emoji grid */}
+            <div
+              ref={emojiScrollRef}
+              className="overflow-y-auto max-h-[300px] pr-2 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent"
+              style={{ scrollbarWidth: 'thin' }}
+            >
+              <div className="grid grid-cols-8 gap-2">
+                {getFilteredEmojis().map((emoji, index) => (
+                  <button
+                    type="button"
+                    key={`${selectedEmojiCategory}-${index}`}
+                    className="text-2xl hover:scale-125 transition-transform p-2 rounded-lg hover:bg-neutral-50"
+                    onClick={() => insertEmoji(emoji)}
+                    aria-label={`Chèn emoji ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+              {getFilteredEmojis().length === 0 && (
+                <p className="text-sm text-neutral-500 text-center py-4">Không tìm thấy emoji</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full">
+          <div className="h-[1px] w-full bg-neutral-200 relative shrink-0"></div>
+          <div className="content-stretch flex items-center justify-between relative shrink-0 w-full">
+            <div className="content-start flex flex-wrap gap-[16px] items-start relative shrink-0">
+              {/* Emoji button - First */}
+              <button
+                type="button"
+                onClick={handleEmojiToggle}
+                className="relative shrink-0 size-[32px] hover:opacity-70 transition-opacity"
+                aria-label="Thêm emoji"
+              >
+                <Image src="/Icon/happy.svg" alt="Emoji" fill sizes="32px" />
+              </button>
+              
+              {/* Photo button - Second */}
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                className="overflow-clip relative shrink-0 size-[32px] hover:opacity-70 transition-opacity"
+                aria-label="Thêm ảnh"
+              >
+                <Image src="/Icon/photo.svg" alt="Ảnh" fill sizes="32px" />
+              </button>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(event) => handleMediaChange(event, 'image')}
+                className="hidden"
+                multiple
+              />
+              
+              {/* Video button - Third */}
+              <button
+                type="button"
+                onClick={() => videoInputRef.current?.click()}
+                className="relative shrink-0 size-[32px] hover:opacity-70 transition-opacity"
+                aria-label="Thêm video"
+              >
+                <Image src="/Icon/clapperboard.svg" alt="Video" fill sizes="32px" />
+              </button>
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                onChange={(event) => handleMediaChange(event, 'video')}
+                className="hidden"
+                multiple
+              />
+              
+              {/* GIF button - Fourth */}
+              <button
+                type="button"
+                onClick={handleGifToggle}
+                className="relative shrink-0 size-[32px] hover:opacity-70 transition-opacity"
+                aria-label="Thêm GIF"
+              >
+                <Image src="/Icon/gif.svg" alt="GIF" fill sizes="32px" />
+              </button>
+            </div>
+            
+            {/* Submit button */}
+            <button
+              type="submit"
+              disabled={isSubmitting || (!caption.trim() && media.length === 0)}
+              className="bg-[#0b0b0b] border border-[rgba(182,182,182,0.1)] border-solid box-border content-stretch flex gap-[12px] h-[30px] items-center justify-center px-[16px] py-0 relative rounded-[4px] shrink-0 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Đăng bài"
+            >
+              <svg width="10" height="17" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 1L11 6L6 11" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M11 6H1" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+/**
+ * Blog Composer - Inline editor for creating blog posts
+ */
+function BlogComposer({ onPostCreated }: { onPostCreated?: () => void }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [category, setCategory] = useState('general')
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return
+
+    const file = e.target.files[0]
+    
+    // Preview
+    const objectUrl = URL.createObjectURL(file)
+    setPreviewImage(objectUrl)
+
+    // Upload
+    const uploadFormData = new FormData()
+    uploadFormData.append('file', file)
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      })
+
+      if (!response.ok) throw new Error('Upload failed')
+
+      const data = await response.json()
+      setImageUrl(data.url)
+      setError(null)
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      setError('Lỗi khi tải ảnh lên.')
+      setPreviewImage(null)
+    }
+  }
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    
+    if (!title.trim() || !content.trim()) {
+      setError('Vui lòng điền đầy đủ tiêu đề và nội dung.')
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      await createBlogPost({
+        title: title.trim(),
+        content: content.trim(),
+        category,
+        image_url: imageUrl || undefined,
+      })
+
+      setSuccess(true)
+      
+      // Reset form
+      setTitle('')
+      setContent('')
+      setCategory('general')
+      setImageUrl(null)
+      setPreviewImage(null)
+      
+      // Collapse after success
+      setTimeout(() => {
+        setIsExpanded(false)
+        setSuccess(false)
+        if (onPostCreated) {
+          onPostCreated()
+        }
+      }, 1500)
+    } catch (error: any) {
+      console.error('Error creating post:', error)
+      setError(error?.response?.data?.detail || error?.message || 'Có lỗi xảy ra khi đăng bài viết.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCancel = () => {
+    setIsExpanded(false)
+    setTitle('')
+    setContent('')
+    setCategory('general')
+    setImageUrl(null)
+    setPreviewImage(null)
+    setError(null)
+    setSuccess(false)
+  }
+
+  if (!isExpanded) {
+    return (
+      <div className="flex justify-center w-full">
+        <button
+          type="button"
+          onClick={() => setIsExpanded(true)}
+          className="bg-[#1c1c1c] flex items-center justify-center px-6 py-3 rounded-xl shadow-[inset_-4px_-4px_4px_0px_rgba(0,0,0,0.4),inset_4px_4px_6px_0px_rgba(255,255,255,0.15)] hover:opacity-90 transition-opacity"
+        >
+          <span className="font-bold text-base text-white uppercase whitespace-nowrap">
+            Tạo blog ngay
+          </span>
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-full max-w-[800px] rounded-[24px] border border-neutral-200 bg-white p-6 shadow-lg">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-semibold text-neutral-900">Soạn bài viết mới</h3>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="text-neutral-500 hover:text-neutral-700 transition"
+            aria-label="Đóng"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm">
+            Đăng bài viết thành công!
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Title */}
+        <div>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Tiêu đề bài viết..."
+            className="w-full px-4 py-3 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#1c1c1c] focus:border-transparent outline-none transition text-lg font-medium"
+            required
+          />
+        </div>
+
+        {/* Category */}
+        <div>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full px-4 py-2 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#1c1c1c] focus:border-transparent outline-none transition text-sm"
+          >
+            <option value="general">Chung</option>
+            <option value="training">Tập luyện</option>
+            <option value="nutrition">Dinh dưỡng</option>
+            <option value="gear">Trang thiết bị</option>
+            <option value="events">Sự kiện</option>
+          </select>
+        </div>
+
+        {/* Image Upload */}
+        <div>
+          {previewImage ? (
+            <div className="relative w-full h-[200px] rounded-xl overflow-hidden border border-neutral-200 group">
+              <Image
+                src={previewImage}
+                alt="Preview"
+                fill
+                className="object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewImage(null)
+                  setImageUrl(null)
+                  if (imageInputRef.current) {
+                    imageInputRef.current.value = ''
+                  }
+                }}
+                className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              className="w-full h-[120px] rounded-xl border-2 border-dashed border-neutral-300 bg-neutral-50 hover:bg-neutral-100 transition flex items-center justify-center flex-col gap-2"
+            >
+              <svg className="w-8 h-8 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span className="text-sm text-neutral-500">Thêm ảnh bìa (tùy chọn)</span>
+            </button>
+          )}
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+        </div>
+
+        {/* Content Editor */}
+        <div>
+          <RichTextEditor
+            content={content}
+            onChange={setContent}
+            placeholder="Viết nội dung bài viết của bạn..."
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="px-6 py-2 rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-50 transition text-sm font-medium"
+          >
+            Hủy
+          </button>
+          <button
+            type="submit"
+            disabled={isLoading || !title.trim() || !content.trim()}
+            className="px-6 py-2 rounded-xl bg-[#1c1c1c] text-white hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow-[inset_-2px_-2px_4px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.1)]"
+          >
+            {isLoading ? 'Đang đăng...' : 'Đăng bài'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
 
 
