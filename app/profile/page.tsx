@@ -171,18 +171,27 @@ export default function ProfilePage() {
       if (!imageSrc || !croppedAreaPixels) return
       
       setIsSaving(true)
+      
+      // Step 1: Crop and compress image (adaptive compression will optimize quality)
+      // This may take a moment as it tries different quality levels
       const croppedImageBlob = await getCroppedImg(
         imageSrc,
         croppedAreaPixels
       )
 
-      if (!croppedImageBlob) return
+      if (!croppedImageBlob) {
+        throw new Error('Không thể xử lý ảnh. Vui lòng thử lại.')
+      }
+
+      // Log compression info for debugging
+      const fileSizeKB = Math.round(croppedImageBlob.size / 1024)
+      console.log(`Image compressed to: ${fileSizeKB}KB`)
 
       // Create form data to upload
       const formData = new FormData()
       formData.append('file', croppedImageBlob, 'avatar.jpg')
 
-      // Upload to API
+      // Step 2: Upload to API
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
@@ -199,7 +208,7 @@ export default function ProfilePage() {
         throw new Error('No image URL returned from upload')
       }
       
-      // Update profile with new avatar URL
+      // Step 3: Update profile with new avatar URL
       await updateProfile({ avatar: data.url })
       window.dispatchEvent(new Event('user:updated'))
       

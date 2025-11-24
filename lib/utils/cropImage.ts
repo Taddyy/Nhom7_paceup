@@ -26,7 +26,91 @@ export function rotateSize(width: number, height: number, rotation: number) {
 }
 
 /**
+ * Compress image to target size with adaptive quality
+ * Tries different quality levels to achieve target file size while maintaining best possible quality
+ */
+async function compressImageToTargetSize(
+  canvas: HTMLCanvasElement,
+  targetSizeBytes: number,
+  maxAttempts = 10
+): Promise<Blob | null> {
+  // Start with high quality and reduce if needed
+  let quality = 0.95
+  const minQuality = 0.5
+  const qualityStep = 0.05
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob)
+      }, 'image/jpeg', quality)
+    })
+    
+    if (!blob) {
+      return null
+    }
+    
+    // Check if we've achieved target size
+    if (blob.size <= targetSizeBytes) {
+      return blob
+    }
+    
+    // If this is the last attempt, return current blob anyway
+    if (attempt === maxAttempts - 1) {
+      return blob
+    }
+    
+    // Reduce quality for next attempt
+    quality = Math.max(minQuality, quality - qualityStep)
+  }
+  
+  return null
+}
+
+/**
+ * Resize canvas to fit within max dimensions while maintaining aspect ratio
+ */
+function resizeCanvas(
+  canvas: HTMLCanvasElement,
+  maxWidth: number,
+  maxHeight: number
+): HTMLCanvasElement {
+  const width = canvas.width
+  const height = canvas.height
+  
+  // Calculate new dimensions
+  let newWidth = width
+  let newHeight = height
+  
+  if (width > maxWidth || height > maxHeight) {
+    const scale = Math.min(maxWidth / width, maxHeight / height)
+    newWidth = Math.round(width * scale)
+    newHeight = Math.round(height * scale)
+    
+    // Create new canvas with resized dimensions
+    const resizedCanvas = document.createElement('canvas')
+    const ctx = resizedCanvas.getContext('2d')
+    if (!ctx) {
+      return canvas
+    }
+    
+    resizedCanvas.width = newWidth
+    resizedCanvas.height = newHeight
+    
+    // Draw with high quality scaling
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(canvas, 0, 0, newWidth, newHeight)
+    
+    return resizedCanvas
+  }
+  
+  return canvas
+}
+
+/**
  * This function was adapted from the one in the ReadMe of https://github.com/DominicTobias/react-image-crop
+ * Now includes adaptive compression to achieve optimal quality within size limits
  */
 export default async function getCroppedImg(
   imageSrc: string,
@@ -80,46 +164,45 @@ export default async function getCroppedImg(
   // paste generated rotate image at the top left corner
   ctx.putImageData(data, 0, 0)
 
-  // Resize to max 600x600 to reduce file size for base64 storage
-  // This ensures the final image (after base64 encoding) fits in database field
-  const MAX_DIMENSION = 600
-  let finalWidth = pixelCrop.width
-  let finalHeight = pixelCrop.height
+  // Target file size: 320KB original file
+  // After base64 encoding: ~427KB (~33% overhead)
+  // Data URL string: ~430KB which fits in database field (5000 chars limit)
+  const TARGET_FILE_SIZE = 320 * 1024 // 320KB
   
-  // Always resize if larger than max dimension
-  if (finalWidth > MAX_DIMENSION || finalHeight > MAX_DIMENSION) {
-    const scale = MAX_DIMENSION / Math.max(finalWidth, finalHeight)
-    finalWidth = Math.round(finalWidth * scale)
-    finalHeight = Math.round(finalHeight * scale)
+  // Try different dimensions, starting from largest for best quality
+  // Progressive approach: try larger size first, then reduce if needed
+  const dimensionsToTry = [800, 700, 600, 500, 400]
+  let bestBlob: Blob | null = null
+  
+  for (const maxDim of dimensionsToTry) {
+    // Resize canvas to current dimension
+    const processedCanvas = resizeCanvas(canvas, maxDim, maxDim)
     
-    // Create new canvas for resized image
-    const resizedCanvas = document.createElement('canvas')
-    const resizedCtx = resizedCanvas.getContext('2d')
-    if (!resizedCtx) {
-      return null
+    // Try to compress to target size
+    const compressedBlob = await compressImageToTargetSize(processedCanvas, TARGET_FILE_SIZE)
+    
+    if (!compressedBlob) {
+      continue
     }
     
-    resizedCanvas.width = finalWidth
-    resizedCanvas.height = finalHeight
+    // If we achieved target size, this is optimal - return immediately
+    if (compressedBlob.size <= TARGET_FILE_SIZE) {
+      return compressedBlob
+    }
     
-    // Draw resized image with smooth scaling
-    resizedCtx.imageSmoothingEnabled = true
-    resizedCtx.imageSmoothingQuality = 'high'
-    resizedCtx.drawImage(canvas, 0, 0, finalWidth, finalHeight)
+    // If this is better than previous attempts, save it
+    if (!bestBlob || compressedBlob.size < bestBlob.size) {
+      bestBlob = compressedBlob
+    }
     
-    // As Blob with compression (quality 0.75 for smaller file size)
-    return new Promise((resolve, reject) => {
-      resizedCanvas.toBlob((file) => {
-        resolve(file)
-      }, 'image/jpeg', 0.75) // 75% quality for smaller file size
-    })
+    // If current blob is already small enough (close to target), use it
+    // Don't need to try smaller dimensions if we're close
+    if (compressedBlob.size <= TARGET_FILE_SIZE * 1.2) {
+      return compressedBlob
+    }
   }
   
-  // As Blob with compression (quality 0.75 for smaller file size)
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((file) => {
-      resolve(file)
-    }, 'image/jpeg', 0.75) // 75% quality for smaller file size
-  })
+  // Return the best blob we found (even if slightly over target)
+  return bestBlob
 }
 

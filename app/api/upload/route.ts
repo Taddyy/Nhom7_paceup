@@ -30,36 +30,29 @@ export async function POST(request: Request) {
     // Convert file to buffer
     const buffer = Buffer.from(await file.arrayBuffer())
     
-    // Check actual buffer size (after cropping/resizing in frontend)
-    // Allow up to 400KB for original file (base64 will be ~533KB, data URL ~535KB)
-    // This should result in data URL ~535KB which fits in 5000 char field
-    const maxSize = 400 * 1024 // 400KB original file
-    if (buffer.length > maxSize) {
-      return NextResponse.json(
-        { 
-          error: `Ảnh quá lớn (${Math.round(buffer.length / 1024)}KB). Vui lòng sử dụng ảnh nhỏ hơn 400KB hoặc chọn chất lượng thấp hơn.`,
-          size: buffer.length,
-          maxSize: maxSize
-        },
-        { status: 400 }
-      )
-    }
-    
     // Convert file to base64 data URL
+    // Frontend adaptive compression should already optimize the file size
     // This works on both local and serverless environments
     const base64 = buffer.toString('base64')
     const dataUrl = `data:${file.type || 'image/jpeg'};base64,${base64}`
     
     // Check if data URL is too long (max ~4800 chars to leave buffer for database field limit of 5000)
-    if (dataUrl.length > 4800) {
+    // With adaptive compression, files should already be optimized
+    const maxDataUrlLength = 4800 // Leave 200 chars buffer for database field limit (5000)
+    if (dataUrl.length > maxDataUrlLength) {
       return NextResponse.json(
         { 
-          error: `Kích thước ảnh sau khi xử lý quá lớn (${Math.round(dataUrl.length / 1024)}KB). Vui lòng sử dụng ảnh nhỏ hơn.`,
-          dataUrlLength: dataUrl.length
+          error: `Kích thước ảnh sau khi xử lý vẫn quá lớn (${Math.round(dataUrl.length / 1024)}KB). Vui lòng thử lại với ảnh nhỏ hơn hoặc crop lại.`,
+          dataUrlLength: dataUrl.length,
+          maxLength: maxDataUrlLength,
+          fileSize: buffer.length
         },
         { status: 400 }
       )
     }
+    
+    // Log successful upload with size info for debugging
+    console.log(`Image uploaded successfully: ${Math.round(buffer.length / 1024)}KB original, ${Math.round(dataUrl.length / 1024)}KB data URL`)
 
     // Return the data URL
     // Frontend can use this directly as image src
