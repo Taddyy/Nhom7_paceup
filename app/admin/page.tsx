@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getAdminStats, getAdminPosts, updatePostStatus, getAdminEvents, updateEventStatus, getAdminReports, resolveReport, dismissReport, getAdminRegistrations, approveRegistration, rejectRegistration, type AdminStats, type EventRegistration, type RejectRegistrationRequest } from '@/lib/api/admin'
+import { getAdminStats, getAdminPosts, updatePostStatus, getAdminEvents, updateEventStatus, rejectEvent, getAdminReports, resolveReport, dismissReport, getAdminRegistrations, approveRegistration, rejectRegistration, type AdminStats, type EventRegistration, type RejectRegistrationRequest } from '@/lib/api/admin'
 import { getCurrentUser, logout } from '@/lib/api/auth-service'
 import type { BlogPost } from '@/lib/api/blog-service'
 import type { Event } from '@/lib/api/events'
@@ -254,7 +254,10 @@ export default function AdminDashboard() {
       return
     }
     try {
-      await updateEventStatus(rejectEventPopup.eventId, 'rejected')
+      await rejectEvent(rejectEventPopup.eventId, {
+        reasons: rejectReasons,
+        description: rejectDescription || undefined
+      })
       setToast({ message: 'Đã từ chối sự kiện', type: 'success', isVisible: true })
       handleCloseRejectEventPopup()
       fetchEvents()

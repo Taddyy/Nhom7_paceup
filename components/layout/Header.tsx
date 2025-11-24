@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { getCurrentUser } from '@/lib/api/auth-service'
+import NotificationBell from '@/components/ui/NotificationBell'
 
 /**
  * Header component that mirrors the translucent navigation capsule in Figma.
@@ -35,6 +36,7 @@ export default function Header({ floating = false }: HeaderProps) {
   const [initials, setInitials] = useState('')
   const [avatar, setAvatar] = useState<string | null>(null)
   const [role, setRole] = useState<string>('user')
+  const [userId, setUserId] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     const syncAuth = async () => {
@@ -53,6 +55,7 @@ export default function Header({ floating = false }: HeaderProps) {
         setIsLoggedIn(true)
         setInitials(getInitials(profile?.full_name ?? profile?.email ?? ''))
         setAvatar(profile?.avatar || null)
+        setUserId(profile?.id)
         // Force update role from profile or specific email
         const userRole = (profile?.email === 'admin@gmail.com' || profile?.role === 'admin') ? 'admin' : 'user'
         setRole(userRole)
@@ -145,12 +148,14 @@ export default function Header({ floating = false }: HeaderProps) {
             })}
           </div>
           {isLoggedIn ? (
-            <button
-              type="button"
-              onClick={handleAvatarClick}
-              className="relative h-[54px] w-[54px] rounded-full bg-white overflow-hidden shadow-[0_6px_12px_rgba(0,0,0,0.15)] flex items-center justify-center text-[#1c1c1c] text-lg font-semibold"
-              aria-label={role === 'admin' ? 'Quản lý' : 'Trang cá nhân'}
-            >
+            <>
+              <NotificationBell userId={userId} />
+              <button
+                type="button"
+                onClick={handleAvatarClick}
+                className="relative h-[54px] w-[54px] rounded-full bg-white overflow-hidden shadow-[0_6px_12px_rgba(0,0,0,0.15)] flex items-center justify-center text-[#1c1c1c] text-lg font-semibold"
+                aria-label={role === 'admin' ? 'Quản lý' : 'Trang cá nhân'}
+              >
               {avatar ? (
                 <Image src={avatar} alt="Avatar" fill className="object-cover" />
               ) : (
@@ -170,7 +175,8 @@ export default function Header({ floating = false }: HeaderProps) {
                   </svg>
                 )
               )}
-            </button>
+              </button>
+            </>
           ) : (
             <Link
               href="/login"

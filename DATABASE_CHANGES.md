@@ -35,7 +35,37 @@ ADD CONSTRAINT fk_reports_reporter_id
 FOREIGN KEY (reporter_id) REFERENCES users(id);
 ```
 
-## 2. Cập nhật bảng `event_registrations`
+## 2. Tạo bảng `notifications` (Thông báo)
+
+**Lưu ý:** Tạo bảng theo 2 bước để tránh lỗi foreign key constraint.
+
+### Bước 1: Tạo bảng không có foreign key
+
+```sql
+CREATE TABLE notifications (
+    id VARCHAR(255) NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    related_id VARCHAR(255) DEFAULT NULL,
+    is_read BOOLEAN DEFAULT FALSE NOT NULL,
+    metadata TEXT DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+```
+
+### Bước 2: Thêm foreign key constraint
+
+```sql
+ALTER TABLE notifications 
+ADD CONSTRAINT fk_notifications_user_id 
+FOREIGN KEY (user_id) REFERENCES users(id);
+```
+
+## 3. Cập nhật bảng `event_registrations`
 
 Thêm các cột mới:
 

@@ -32,6 +32,11 @@ export interface RejectRegistrationRequest {
   description?: string
 }
 
+export interface RejectEventRequest {
+  reasons: string[]
+  description?: string
+}
+
 export async function getAdminStats(): Promise<AdminStats> {
   const response = await apiClient.get<AdminStats>('/admin/stats')
   return response.data
@@ -62,6 +67,11 @@ export async function updateEventStatus(eventId: string, status: 'approved' | 'r
   const response = await apiClient.put(`/admin/events/${eventId}/status`, null, {
     params: { status_update: status }
   })
+  return response.data
+}
+
+export async function rejectEvent(eventId: string, data: RejectEventRequest) {
+  const response = await apiClient.put(`/admin/events/${eventId}/reject`, data)
   return response.data
 }
 

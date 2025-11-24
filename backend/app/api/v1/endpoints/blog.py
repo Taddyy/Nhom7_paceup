@@ -9,6 +9,7 @@ from app.core.security import decode_access_token
 from app.models.blog import BlogPost, BlogPostLike
 from app.models.user import User
 from app.schemas.blog import BlogPostCreate, BlogPostUpdate, BlogPostResponse
+from app.core.notifications import notify_post_liked
 import uuid
 from datetime import datetime
 
@@ -300,6 +301,12 @@ async def like_blog_post(
     
     db.add(new_like)
     db.commit()
+    
+    # Create notification for post author (if not self-like)
+    if post.author_id != user_id:
+        liker = db.query(User).filter(User.id == user_id).first()
+        liker_name = liker.full_name if liker else "Ai đó"
+        notify_post_liked(db, post.author_id, liker_name, post.id)
     
     return {"message": "Post liked"}
 

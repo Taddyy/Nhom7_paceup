@@ -14,6 +14,7 @@ from app.models.report import Report
 from app.schemas.blog import BlogPostResponse
 from app.schemas.event import EventResponse
 from app.schemas.report import ReportResponse
+from app.core.notifications import notify_blog_approved, notify_blog_rejected, notify_event_approved, notify_event_rejected
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -144,6 +145,13 @@ async def update_post_status(
         
     post.status = status_update
     db.commit()
+    
+    # Create notification for the author
+    if status_update == "approved":
+        notify_blog_approved(db, post.author_id, post.title, post.id)
+    elif status_update == "rejected":
+        notify_blog_rejected(db, post.author_id, post.title, post.id)
+    
     return {"message": f"Post status updated to {status_update}"}
 
 @router.get("/events", response_model=List[EventResponse])
@@ -195,6 +203,8 @@ async def get_admin_events(
 async def update_event_status(
     event_id: str,
     status_update: str = Query(..., regex="^(approved|rejected|pending)$"),
+    rejection_reasons: Optional[TypingList[str]] = None,
+    rejection_description: Optional[str] = None,
     current_admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
@@ -205,7 +215,48 @@ async def update_event_status(
         
     event.status = status_update
     db.commit()
+    
+    # Create notification for the organizer
+    if status_update == "approved":
+        notify_event_approved(db, event.organizer_id, event.title, event.id)
+    elif status_update == "rejected":
+        notify_event_rejected(
+            db,
+            event.organizer_id,
+            event.title,
+            event.id,
+            rejection_reasons or [],
+            rejection_description
+        )
+    
     return {"message": f"Event status updated to {status_update}"}
+
+@router.put("/events/{event_id}/reject")
+async def reject_event_with_reasons(
+    event_id: str,
+    rejection_data: RejectEventRegistrationRequest = Body(...),
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Reject an event with reasons"""
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    event.status = "rejected"
+    db.commit()
+    
+    # Create notification with rejection reasons
+    notify_event_rejected(
+        db,
+        event.organizer_id,
+        event.title,
+        event.id,
+        rejection_data.reasons,
+        rejection_data.description
+    )
+    
+    return {"message": "Event rejected"}
 
 # Reports endpoints
 @router.get("/reports", response_model=List[ReportResponse])
