@@ -27,27 +27,36 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check file size (max 500KB for base64 data URLs to prevent database issues)
-    const maxSize = 500 * 1024 // 500KB
-    if (file.size > maxSize) {
+    // Convert file to buffer
+    const buffer = Buffer.from(await file.arrayBuffer())
+    
+    // Check actual buffer size (after cropping/resizing in frontend)
+    // Allow up to 400KB for original file (base64 will be ~533KB, data URL ~535KB)
+    // This should result in data URL ~535KB which fits in 5000 char field
+    const maxSize = 400 * 1024 // 400KB original file
+    if (buffer.length > maxSize) {
       return NextResponse.json(
-        { error: 'Image is too large. Please use an image smaller than 500KB' },
+        { 
+          error: `Ảnh quá lớn (${Math.round(buffer.length / 1024)}KB). Vui lòng sử dụng ảnh nhỏ hơn 400KB hoặc chọn chất lượng thấp hơn.`,
+          size: buffer.length,
+          maxSize: maxSize
+        },
         { status: 400 }
       )
     }
-
-    // Convert file to buffer
-    const buffer = Buffer.from(await file.arrayBuffer())
     
     // Convert file to base64 data URL
     // This works on both local and serverless environments
     const base64 = buffer.toString('base64')
-    const dataUrl = `data:${file.type};base64,${base64}`
+    const dataUrl = `data:${file.type || 'image/jpeg'};base64,${base64}`
     
-    // Check if data URL is too long (max ~4500 chars to leave buffer for database field limit)
-    if (dataUrl.length > 4500) {
+    // Check if data URL is too long (max ~4800 chars to leave buffer for database field limit of 5000)
+    if (dataUrl.length > 4800) {
       return NextResponse.json(
-        { error: 'Image is too large. Please use a smaller image or compress it first.' },
+        { 
+          error: `Kích thước ảnh sau khi xử lý quá lớn (${Math.round(dataUrl.length / 1024)}KB). Vui lòng sử dụng ảnh nhỏ hơn.`,
+          dataUrlLength: dataUrl.length
+        },
         { status: 400 }
       )
     }

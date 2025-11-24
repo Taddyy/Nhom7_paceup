@@ -80,11 +80,46 @@ export default async function getCroppedImg(
   // paste generated rotate image at the top left corner
   ctx.putImageData(data, 0, 0)
 
-  // As Blob
+  // Resize to max 600x600 to reduce file size for base64 storage
+  // This ensures the final image (after base64 encoding) fits in database field
+  const MAX_DIMENSION = 600
+  let finalWidth = pixelCrop.width
+  let finalHeight = pixelCrop.height
+  
+  // Always resize if larger than max dimension
+  if (finalWidth > MAX_DIMENSION || finalHeight > MAX_DIMENSION) {
+    const scale = MAX_DIMENSION / Math.max(finalWidth, finalHeight)
+    finalWidth = Math.round(finalWidth * scale)
+    finalHeight = Math.round(finalHeight * scale)
+    
+    // Create new canvas for resized image
+    const resizedCanvas = document.createElement('canvas')
+    const resizedCtx = resizedCanvas.getContext('2d')
+    if (!resizedCtx) {
+      return null
+    }
+    
+    resizedCanvas.width = finalWidth
+    resizedCanvas.height = finalHeight
+    
+    // Draw resized image with smooth scaling
+    resizedCtx.imageSmoothingEnabled = true
+    resizedCtx.imageSmoothingQuality = 'high'
+    resizedCtx.drawImage(canvas, 0, 0, finalWidth, finalHeight)
+    
+    // As Blob with compression (quality 0.75 for smaller file size)
+    return new Promise((resolve, reject) => {
+      resizedCanvas.toBlob((file) => {
+        resolve(file)
+      }, 'image/jpeg', 0.75) // 75% quality for smaller file size
+    })
+  }
+  
+  // As Blob with compression (quality 0.75 for smaller file size)
   return new Promise((resolve, reject) => {
     canvas.toBlob((file) => {
       resolve(file)
-    }, 'image/jpeg')
+    }, 'image/jpeg', 0.75) // 75% quality for smaller file size
   })
 }
 
