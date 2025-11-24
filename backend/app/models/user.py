@@ -37,7 +37,7 @@ class User(Base):
     address = Column(String(500))
     running_experience = Column(SQLEnum(RunningExperienceEnum))
     goals = Column(String(1000))
-    avatar = Column(String(500))
+    avatar = Column(String(5000))  # Increased to support base64 data URLs
     role = Column(String(20), default="user")  # user, admin
     is_active = Column(String(10), default="true")
     created_at = Column(DateTime, server_default=func.now())

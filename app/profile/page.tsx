@@ -188,9 +188,16 @@ export default function ProfilePage() {
         body: formData,
       })
 
-      if (!response.ok) throw new Error('Upload failed')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || 'Upload failed')
+      }
 
       const data = await response.json()
+      
+      if (!data.url) {
+        throw new Error('No image URL returned from upload')
+      }
       
       // Update profile with new avatar URL
       await updateProfile({ avatar: data.url })
@@ -199,9 +206,10 @@ export default function ProfilePage() {
       setToast({ message: 'Cập nhật ảnh đại diện thành công!', type: 'success', isVisible: true })
       setIsCropModalOpen(false)
       fetchUserData()
-    } catch (e) {
-      console.error(e)
-      setToast({ message: 'Lỗi khi cập nhật ảnh.', type: 'error', isVisible: true })
+    } catch (e: any) {
+      console.error('Upload error:', e)
+      const errorMessage = e?.response?.data?.detail || e?.message || 'Lỗi khi cập nhật ảnh.'
+      setToast({ message: errorMessage, type: 'error', isVisible: true })
     } finally {
       setIsSaving(false)
     }
