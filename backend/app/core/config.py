@@ -10,7 +10,11 @@ class Settings(BaseSettings):
     """Application settings"""
     
     # Database
-    # Default to local MySQL if not set in environment
+    # Database connection URL - reads from DATABASE_URL environment variable
+    # Default to local MySQL if not set in environment (for local development)
+    # In production (Vercel), DATABASE_URL is set in environment variables
+    # Database name is specified in the connection string (e.g., /paceup)
+    # Example format: mysql+pymysql://user:password@host:port/database_name?charset=utf8mb4
     DATABASE_URL: str = os.getenv("DATABASE_URL", "mysql+pymysql://root:062103@localhost:3306/paceup?charset=utf8mb4")
     
     # JWT

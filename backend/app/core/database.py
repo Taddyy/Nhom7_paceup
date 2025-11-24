@@ -2,6 +2,7 @@
 Database configuration and session management
 """
 import logging
+import re
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -13,6 +14,27 @@ logger = logging.getLogger(__name__)
 # For TiDB Cloud, we need to handle SSL connection
 # TiDB is MySQL-compatible, so we use pymysql driver
 # Wrap engine creation in try-except to prevent import failures
+
+def extract_database_name(database_url: str) -> str:
+    """
+    Extract database name from DATABASE_URL connection string.
+    
+    Args:
+        database_url: Database connection string (e.g., mysql+pymysql://user:pass@host:port/dbname?params)
+    
+    Returns:
+        Database name if found, otherwise 'unknown'
+    """
+    try:
+        # Pattern to match database name in connection string
+        # Format: mysql+pymysql://user:pass@host:port/dbname?params
+        match = re.search(r'/([^/?]+)(?:\?|$)', database_url)
+        if match:
+            return match.group(1)
+        return "unknown"
+    except Exception:
+        return "unknown"
+
 try:
     connect_args = {}
     if "tidbcloud.com" in settings.DATABASE_URL:
@@ -26,6 +48,10 @@ try:
             }
         }
     
+    # Extract and log database name for debugging
+    db_name = extract_database_name(settings.DATABASE_URL)
+    logger.info(f"Initializing database connection to database: '{db_name}'")
+    
     engine = create_engine(
         settings.DATABASE_URL,
         pool_pre_ping=True,
@@ -33,7 +59,7 @@ try:
         echo=False,
         connect_args=connect_args
     )
-    logger.info(f"Database engine created successfully (URL: {settings.DATABASE_URL[:50]}...)")
+    logger.info(f"Database engine created successfully for database: '{db_name}' (URL: {settings.DATABASE_URL[:50]}...)")
 except Exception as e:
     logger.error(f"Failed to create database engine: {e}", exc_info=True)
     # Don't raise here - let the app start and fail later when actually connecting

@@ -16,14 +16,16 @@ mysql+pymysql://USERNAME:PASSWORD@HOST:PORT/DATABASE?charset=utf8mb4
 
 Ví dụ:
 ```
-mysql+pymysql://2J436DV2xSdM6WM.root:8mKd2eeLLOPUfNB2@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test
+mysql+pymysql://2J436DV2xSdM6WM.root:8mKd2eeLLOPUfNB2@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/paceup
 ```
+
+**Lưu ý:** Database name hiện tại là `paceup`. Database name được đọc từ `DATABASE_URL` environment variable và có thể được thay đổi trong Vercel project settings.
 
 ### Giải thích:
 - `mysql+pymysql://` - Protocol và driver (pymysql)
 - `USERNAME:PASSWORD` - TiDB Cloud credentials
 - `HOST:PORT` - TiDB Cloud endpoint
-- `DATABASE` - Database name
+- `DATABASE` - Database name (ví dụ: `paceup`)
 - `charset=utf8mb4` - Character encoding
 
 ## SSL Configuration
