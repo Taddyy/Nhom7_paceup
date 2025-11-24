@@ -32,12 +32,15 @@ export function rotateSize(width: number, height: number, rotation: number) {
 async function compressImageToTargetSize(
   canvas: HTMLCanvasElement,
   targetSizeBytes: number,
-  maxAttempts = 10
+  maxAttempts = 20
 ): Promise<Blob | null> {
   // Start with high quality and reduce if needed
   let quality = 0.95
-  const minQuality = 0.5
+  const minQuality = 0.3 // Lower minimum for more aggressive compression
   const qualityStep = 0.05
+  
+  let bestBlob: Blob | null = null
+  let bestSize = Infinity
   
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const blob = await new Promise<Blob | null>((resolve) => {
@@ -47,7 +50,15 @@ async function compressImageToTargetSize(
     })
     
     if (!blob) {
-      return null
+      // If we can't create blob, try lower quality
+      quality = Math.max(minQuality, quality - qualityStep)
+      continue
+    }
+    
+    // Track the best (smallest) blob we've found
+    if (blob.size < bestSize) {
+      bestBlob = blob
+      bestSize = blob.size
     }
     
     // Check if we've achieved target size
@@ -55,16 +66,17 @@ async function compressImageToTargetSize(
       return blob
     }
     
-    // If this is the last attempt, return current blob anyway
+    // If this is the last attempt, return best blob we found
     if (attempt === maxAttempts - 1) {
-      return blob
+      return bestBlob
     }
     
     // Reduce quality for next attempt
     quality = Math.max(minQuality, quality - qualityStep)
   }
   
-  return null
+  // Return the best blob we found
+  return bestBlob
 }
 
 /**
@@ -164,15 +176,32 @@ export default async function getCroppedImg(
   // paste generated rotate image at the top left corner
   ctx.putImageData(data, 0, 0)
 
-  // Target file size: 320KB original file
-  // After base64 encoding: ~427KB (~33% overhead)
-  // Data URL string: ~430KB which fits in database field (5000 chars limit)
-  const TARGET_FILE_SIZE = 320 * 1024 // 320KB
+  // Target file size calculation for database storage:
+  // Database field limit: 5000 chars
+  // Max data URL length: 4800 chars (leaving 200 buffer)
+  // Data URL format: "data:image/jpeg;base64,<base64_data>"
+  // Base64 encoding increases size by ~33% (4 chars per 3 bytes)
+  // 
+  // Example: 200KB raw file
+  // - Base64: 200KB * 4/3 = ~267KB chars
+  // - Data URL: 23 chars prefix + 267KB = ~273KB total < 4800 ✓
+  // 
+  // Use 180KB as safe target to ensure it always fits
+  const MAX_DATA_URL_LENGTH = 4800
+  const DATA_URL_PREFIX = "data:image/jpeg;base64,"
+  const DATA_URL_PREFIX_LENGTH = DATA_URL_PREFIX.length
+  const BASE64_OVERHEAD = 4 / 3 // Base64 encoding ratio
+  
+  // Target: 180KB raw file ensures data URL < 4800 chars
+  // 180KB = 184320 bytes
+  // Base64: 184320 * 4/3 = 245760 chars
+  // Data URL: 245760 + 23 = 245783 chars << 4800 ✓ (very safe)
+  const TARGET_FILE_SIZE = 180 * 1024 // 180KB
   
   // Try different dimensions, starting from largest for best quality
-  // Progressive approach: try larger size first, then reduce if needed
-  const dimensionsToTry = [800, 700, 600, 500, 400]
+  const dimensionsToTry = [800, 700, 600, 500, 400, 350, 300, 250, 200]
   let bestBlob: Blob | null = null
+  let bestSize = Infinity
   
   for (const maxDim of dimensionsToTry) {
     // Resize canvas to current dimension
@@ -185,24 +214,55 @@ export default async function getCroppedImg(
       continue
     }
     
-    // If we achieved target size, this is optimal - return immediately
-    if (compressedBlob.size <= TARGET_FILE_SIZE) {
+    // Estimate data URL length after base64 encoding
+    const estimatedDataUrlLength = Math.ceil(compressedBlob.size * BASE64_OVERHEAD) + DATA_URL_PREFIX_LENGTH
+    
+    // If we achieved target size and it fits, return immediately
+    if (compressedBlob.size <= TARGET_FILE_SIZE && estimatedDataUrlLength <= MAX_DATA_URL_LENGTH) {
       return compressedBlob
     }
     
-    // If this is better than previous attempts, save it
-    if (!bestBlob || compressedBlob.size < bestBlob.size) {
-      bestBlob = compressedBlob
-    }
-    
-    // If current blob is already small enough (close to target), use it
-    // Don't need to try smaller dimensions if we're close
-    if (compressedBlob.size <= TARGET_FILE_SIZE * 1.2) {
-      return compressedBlob
+    // Track the smallest blob that fits within limits
+    if (estimatedDataUrlLength <= MAX_DATA_URL_LENGTH) {
+      if (compressedBlob.size < bestSize) {
+        bestBlob = compressedBlob
+        bestSize = compressedBlob.size
+      }
+      // If it fits and is close to target, use it
+      if (compressedBlob.size <= TARGET_FILE_SIZE * 1.2) {
+        return compressedBlob
+      }
     }
   }
   
-  // Return the best blob we found (even if slightly over target)
+  // If we found a blob that fits, return it
+  if (bestBlob && bestSize < Infinity) {
+    return bestBlob
+  }
+  
+  // Last resort: try even smaller dimensions
+  const emergencyDimensions = [180, 150, 120, 100]
+  for (const maxDim of emergencyDimensions) {
+    const processedCanvas = resizeCanvas(canvas, maxDim, maxDim)
+    const compressedBlob = await compressImageToTargetSize(processedCanvas, TARGET_FILE_SIZE)
+    
+    if (!compressedBlob) {
+      continue
+    }
+    
+    const estimatedDataUrlLength = Math.ceil(compressedBlob.size * BASE64_OVERHEAD) + DATA_URL_PREFIX_LENGTH
+    if (estimatedDataUrlLength <= MAX_DATA_URL_LENGTH) {
+      return compressedBlob
+    }
+    
+    // Track smallest even if slightly over limit
+    if (compressedBlob.size < bestSize) {
+      bestBlob = compressedBlob
+      bestSize = compressedBlob.size
+    }
+  }
+  
+  // Return the best we could achieve (will be validated on server side)
   return bestBlob
 }
 
