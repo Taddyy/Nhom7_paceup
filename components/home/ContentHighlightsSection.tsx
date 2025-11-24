@@ -520,7 +520,6 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
 
   const handleHidePost = () => {
     setIsHidden(true)
-    setIsOptionsOpen(false)
   }
 
   const handleUnhidePost = () => {
