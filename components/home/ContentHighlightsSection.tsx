@@ -501,16 +501,27 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
     )
   }
 
-  const handleSubmitReport = () => {
+  const handleSubmitReport = async () => {
     if (reportReasons.length === 0) {
       return
     }
-    // Here you would typically send the report to the backend
-    console.log('Report submitted:', { reasons: reportReasons, description: reportDescription })
-    setIsReportOpen(false)
-    setReportReasons([])
-    setReportDescription('')
-    // Show success message (you can add a toast here)
+    
+    try {
+      const { createReport } = await import('@/lib/api/reports')
+      await createReport({
+        post_id: article.id,
+        reasons: reportReasons,
+        description: reportDescription || undefined
+      })
+      setIsReportOpen(false)
+      setReportReasons([])
+      setReportDescription('')
+      // Show success message
+      alert('Báo cáo đã được gửi thành công!')
+    } catch (error: any) {
+      console.error('Failed to submit report:', error)
+      alert(error?.response?.data?.detail || 'Lỗi khi gửi báo cáo. Vui lòng thử lại.')
+    }
   }
 
   const handleHidePost = () => {
@@ -601,7 +612,10 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
                     type="checkbox"
                     checked={reportReasons.includes(reason)}
                     onChange={() => handleReportReasonChange(reason)}
-                    className="w-4 h-4 rounded border-neutral-300 text-[#1c1c1c] focus:ring-2 focus:ring-[#1c1c1c]"
+                    className="w-4 h-4 rounded border-neutral-300 text-[#000] focus:ring-2 focus:ring-[#1c1c1c] checked:bg-[#000] checked:border-[#000]"
+                    style={{
+                      accentColor: '#000'
+                    }}
                   />
                   <span className="text-sm text-neutral-700">{reason}</span>
                 </label>

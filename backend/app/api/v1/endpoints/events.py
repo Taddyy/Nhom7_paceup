@@ -347,13 +347,14 @@ async def register_for_event(
             detail="Already registered for this event",
         )
     
-    # Create registration
+    # Create registration with pending status (needs admin approval)
     registration_id = str(uuid.uuid4())
     new_registration = EventRegistration(
         id=registration_id,
         event_id=registration_data.event_id,
         user_id=user_id,
         category=registration_data.category,
+        status="pending",
     )
     
     db.add(new_registration)

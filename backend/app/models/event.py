@@ -49,7 +49,11 @@ class EventRegistration(Base):
     event_id = Column(String(255), ForeignKey("events.id"), nullable=False)
     user_id = Column(String(255), ForeignKey("users.id"), nullable=False)
     category = Column(String(100), nullable=False)
+    status = Column(String(20), default="pending", nullable=False)  # pending, approved, rejected
+    rejection_reasons = Column(JSON, nullable=True)  # List of rejection reasons
+    rejection_description = Column(Text, nullable=True)  # Additional rejection description
     created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
 
     # Relationships
     event = relationship("Event", back_populates="registrations")

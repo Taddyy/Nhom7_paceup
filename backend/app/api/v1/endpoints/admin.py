@@ -1,16 +1,19 @@
 """
 Admin endpoints
 """
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
+from typing import List, Optional, List as TypingList
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Header, Body
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.user import User
 from app.models.blog import BlogPost
-from app.models.event import Event
+from app.models.event import Event, EventRegistration
+from app.models.report import Report
 from app.schemas.blog import BlogPostResponse
 from app.schemas.event import EventResponse
+from app.schemas.report import ReportResponse
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -21,6 +24,28 @@ class AdminStats(BaseModel):
     pending_events: int
     total_posts: int
     total_events: int
+    pending_reports: int
+    pending_registrations: int
+
+class EventRegistrationResponse(BaseModel):
+    id: str
+    event_id: str
+    user_id: str
+    user_name: Optional[str] = None
+    event_title: Optional[str] = None
+    category: str
+    status: str
+    rejection_reasons: Optional[TypingList[str]] = None
+    rejection_description: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+class RejectEventRegistrationRequest(BaseModel):
+    reasons: TypingList[str]
+    description: Optional[str] = None
 
 def get_current_admin(
     authorization: Optional[str] = Header(None, alias="Authorization"),
@@ -57,13 +82,17 @@ async def get_admin_stats(
     pending_events = db.query(Event).filter(Event.status == "pending").count()
     total_posts = db.query(BlogPost).count()
     total_events = db.query(Event).count()
+    pending_reports = db.query(Report).filter(Report.status == "pending").count()
+    pending_registrations = db.query(EventRegistration).filter(EventRegistration.status == "pending").count()
     
     return AdminStats(
         total_users=total_users,
         pending_posts=pending_posts,
         pending_events=pending_events,
         total_posts=total_posts,
-        total_events=total_events
+        total_events=total_events,
+        pending_reports=pending_reports,
+        pending_registrations=pending_registrations
     )
 
 @router.get("/posts", response_model=List[BlogPostResponse])
@@ -177,4 +206,146 @@ async def update_event_status(
     event.status = status_update
     db.commit()
     return {"message": f"Event status updated to {status_update}"}
+
+# Reports endpoints
+@router.get("/reports", response_model=List[ReportResponse])
+async def get_admin_reports(
+    status: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Get reports for admin management"""
+    offset = (page - 1) * limit
+    query = db.query(Report)
+    
+    if status and status != "all":
+        query = query.filter(Report.status == status)
+    else:
+        query = query.filter(Report.status == "pending")  # Default to pending
+    
+    reports = query.order_by(Report.created_at.desc()).offset(offset).limit(limit).all()
+    
+    result = []
+    for report in reports:
+        reporter = db.query(User).filter(User.id == report.reporter_id).first()
+        result.append(ReportResponse(
+            id=report.id,
+            post_id=report.post_id,
+            reporter_id=report.reporter_id,
+            reporter_name=reporter.full_name if reporter else "Unknown",
+            reasons=report.reasons,
+            description=report.description,
+            status=report.status,
+            created_at=report.created_at,
+            updated_at=report.updated_at,
+        ))
+    return result
+
+@router.put("/reports/{report_id}/resolve")
+async def resolve_report(
+    report_id: str,
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Resolve report by deleting the post"""
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    post = db.query(BlogPost).filter(BlogPost.id == report.post_id).first()
+    if post:
+        db.delete(post)  # Delete the reported post
+    
+    report.status = "resolved"
+    db.commit()
+    return {"message": "Report resolved and post deleted"}
+
+@router.put("/reports/{report_id}/dismiss")
+async def dismiss_report(
+    report_id: str,
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Dismiss report (delete the report, keep the post)"""
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    report.status = "dismissed"
+    db.commit()
+    return {"message": "Report dismissed"}
+
+# Event Registration endpoints
+@router.get("/registrations", response_model=List[EventRegistrationResponse])
+async def get_admin_registrations(
+    status: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Get event registrations for admin management"""
+    offset = (page - 1) * limit
+    query = db.query(EventRegistration)
+    
+    if status and status != "all":
+        query = query.filter(EventRegistration.status == status)
+    else:
+        query = query.filter(EventRegistration.status == "pending")  # Default to pending
+    
+    registrations = query.order_by(EventRegistration.created_at.desc()).offset(offset).limit(limit).all()
+    
+    result = []
+    for registration in registrations:
+        user = db.query(User).filter(User.id == registration.user_id).first()
+        event = db.query(Event).filter(Event.id == registration.event_id).first()
+        result.append(EventRegistrationResponse(
+            id=registration.id,
+            event_id=registration.event_id,
+            user_id=registration.user_id,
+            user_name=user.full_name if user else "Unknown",
+            event_title=event.title if event else "Unknown",
+            category=registration.category,
+            status=registration.status,
+            rejection_reasons=registration.rejection_reasons,
+            rejection_description=registration.rejection_description,
+            created_at=registration.created_at,
+            updated_at=registration.updated_at,
+        ))
+    return result
+
+@router.put("/registrations/{registration_id}/approve")
+async def approve_registration(
+    registration_id: str,
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Approve an event registration"""
+    registration = db.query(EventRegistration).filter(EventRegistration.id == registration_id).first()
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    
+    registration.status = "approved"
+    db.commit()
+    return {"message": "Registration approved"}
+
+@router.put("/registrations/{registration_id}/reject")
+async def reject_registration(
+    registration_id: str,
+    rejection_data: RejectEventRegistrationRequest = Body(...),
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Reject an event registration with reasons"""
+    registration = db.query(EventRegistration).filter(EventRegistration.id == registration_id).first()
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    
+    registration.status = "rejected"
+    registration.rejection_reasons = rejection_data.reasons
+    registration.rejection_description = rejection_data.description
+    db.commit()
+    return {"message": "Registration rejected"}
 
