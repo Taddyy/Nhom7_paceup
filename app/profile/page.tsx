@@ -11,6 +11,7 @@ import EventCard from '@/components/events/EventCard'
 import Toast from '@/components/ui/Toast'
 import Cropper, { Area } from 'react-easy-crop'
 import getCroppedImg from '@/lib/utils/cropImage'
+import CustomSelect from '@/components/ui/CustomSelect'
 
 const INPUT_CLASS =
   'h-[56px] w-full rounded-[12px] border border-black/20 px-5 text-base text-[#1c1c1c] placeholder-black/40 focus:border-black focus:ring-2 focus:ring-black/15 focus:outline-none transition-all'
@@ -450,32 +451,34 @@ export default function ProfilePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Giới tính</label>
-                  <select
-                    name="gender"
+                  <CustomSelect
+                    options={[
+                      { label: 'Chọn giới tính', value: '' },
+                      { label: 'Nam', value: 'male' },
+                      { label: 'Nữ', value: 'female' },
+                      { label: 'Khác', value: 'other' }
+                    ]}
                     value={formData.gender || ''}
-                    onChange={handleInputChange}
-                    className={INPUT_CLASS}
-                  >
-                    <option value="">Chọn giới tính</option>
-                    <option value="male">Nam</option>
-                    <option value="female">Nữ</option>
-                    <option value="other">Khác</option>
-                  </select>
+                    onChange={(value) => handleInputChange({ target: { name: 'gender', value } } as React.ChangeEvent<HTMLSelectElement>)}
+                    placeholder="Chọn giới tính"
+                    variant="default"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Kinh nghiệm chạy bộ</label>
-                  <select
-                    name="running_experience"
+                  <CustomSelect
+                    options={[
+                      { label: 'Chọn kinh nghiệm', value: '' },
+                      { label: 'Người mới (Beginner)', value: 'beginner' },
+                      { label: 'Trung bình (Intermediate)', value: 'intermediate' },
+                      { label: 'Nâng cao (Advanced)', value: 'advanced' },
+                      { label: 'Chuyên gia (Expert)', value: 'expert' }
+                    ]}
                     value={formData.running_experience || ''}
-                    onChange={handleInputChange}
-                    className={INPUT_CLASS}
-                  >
-                    <option value="">Chọn kinh nghiệm</option>
-                    <option value="beginner">Người mới (Beginner)</option>
-                    <option value="intermediate">Trung bình (Intermediate)</option>
-                    <option value="advanced">Nâng cao (Advanced)</option>
-                    <option value="expert">Chuyên gia (Expert)</option>
-                  </select>
+                    onChange={(value) => handleInputChange({ target: { name: 'running_experience', value } } as React.ChangeEvent<HTMLSelectElement>)}
+                    placeholder="Chọn kinh nghiệm"
+                    variant="default"
+                  />
                 </div>
               </div>
               <div className="space-y-2">

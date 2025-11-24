@@ -55,9 +55,9 @@ export default function CustomSelect({
     ? `bg-[#f3f3f3] border border-[rgba(182,182,182,0.1)] rounded-[12px] px-3 h-[50px] flex items-center gap-2 ${
         width === 'auto' ? 'w-full' : ''
       } hover:bg-neutral-100 transition-colors`
-    : `w-full rounded-[12px] border px-4 py-3 text-base text-neutral-900 focus:outline-none transition bg-white flex items-center gap-2 ${
+    : `w-full rounded-[12px] border px-4 text-base text-neutral-900 focus:outline-none transition bg-white flex items-center gap-2 ${
         error ? 'border-red-500 focus:border-red-500' : 'border-neutral-200 focus:border-neutral-900'
-      } hover:bg-neutral-50`
+      } hover:bg-neutral-50 h-[56px]`
 
   return (
     <div className={`relative ${className}`} ref={selectRef} style={width !== 'auto' && !isHeroVariant ? { width } : undefined}>
@@ -74,6 +74,7 @@ export default function CustomSelect({
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
+          style={variant === 'default' ? { paddingRight: '16px' } : undefined}
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
