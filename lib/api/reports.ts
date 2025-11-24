@@ -19,21 +19,21 @@ export interface CreateReportRequest {
 }
 
 export const createReport = async (data: CreateReportRequest): Promise<Report> => {
-  const response = await apiClient.post<Report>('/api/v1/reports', data)
+  const response = await apiClient.post<Report>('/reports', data)
   return response.data
 }
 
 export const getReports = async (status?: string): Promise<Report[]> => {
   const params = status ? `?status=${status}` : ''
-  const response = await apiClient.get<Report[]>(`/api/v1/admin/reports${params}`)
+  const response = await apiClient.get<Report[]>(`/admin/reports${params}`)
   return response.data
 }
 
 export const resolveReport = async (reportId: string): Promise<void> => {
-  await apiClient.put(`/api/v1/admin/reports/${reportId}/resolve`)
+  await apiClient.put(`/admin/reports/${reportId}/resolve`)
 }
 
 export const dismissReport = async (reportId: string): Promise<void> => {
-  await apiClient.put(`/api/v1/admin/reports/${reportId}/dismiss`)
+  await apiClient.put(`/admin/reports/${reportId}/dismiss`)
 }
 
