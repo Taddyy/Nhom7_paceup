@@ -141,6 +141,22 @@ async def health_check_root():
         return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
 
 
+@app.get("/api/health")
+async def health_check_api():
+    """Health check endpoint at /api/health level"""
+    try:
+        # Test database connection
+        from app.core.database import SessionLocal
+        from sqlalchemy import text
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
+
+
 # ============================================================================
 # TEMPORARY ENDPOINTS FOR DATABASE INITIALIZATION
 # NOTE: Keep these endpoints for now as they may be needed for re-initialization
