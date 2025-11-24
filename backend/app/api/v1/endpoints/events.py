@@ -2,7 +2,7 @@
 Events endpoints
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import decode_access_token
@@ -15,7 +15,7 @@ from datetime import datetime
 router = APIRouter()
 
 
-def get_current_user_id(authorization: str = None) -> str:
+def get_current_user_id(authorization: Optional[str] = None) -> Optional[str]:
     """Extract user ID from authorization token"""
     if not authorization or not authorization.startswith("Bearer "):
         return None
@@ -119,7 +119,7 @@ async def get_event(event_id: str, db: Session = Depends(get_db)):
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
 async def create_event(
     event_data: EventCreate,
-    authorization: str = None,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     db: Session = Depends(get_db)
 ):
     """Create new event"""
@@ -179,7 +179,7 @@ async def create_event(
 async def update_event(
     event_id: str,
     event_data: EventUpdate,
-    authorization: str = None,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     db: Session = Depends(get_db)
 ):
     """Update event"""
@@ -242,7 +242,7 @@ async def update_event(
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_event(
     event_id: str,
-    authorization: str = None,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     db: Session = Depends(get_db)
 ):
     """Delete event"""
@@ -275,7 +275,7 @@ async def delete_event(
 @router.post("/register", status_code=status.HTTP_200_OK)
 async def register_for_event(
     registration_data: EventRegistrationRequest,
-    authorization: str = None,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     db: Session = Depends(get_db)
 ):
     """Register for an event"""
@@ -350,7 +350,7 @@ async def register_for_event(
 @router.delete("/{event_id}/register", status_code=status.HTTP_200_OK)
 async def cancel_event_registration(
     event_id: str,
-    authorization: str = None,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     db: Session = Depends(get_db)
 ):
     """Cancel event registration"""

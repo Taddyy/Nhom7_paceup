@@ -2,7 +2,7 @@
 Blog endpoints
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import decode_access_token
@@ -15,7 +15,7 @@ from datetime import datetime
 router = APIRouter()
 
 
-def get_current_user_id(authorization: str = None) -> str:
+def get_current_user_id(authorization: Optional[str] = None) -> Optional[str]:
     """Extract user ID from authorization token"""
     if not authorization or not authorization.startswith("Bearer "):
         return None
@@ -118,7 +118,7 @@ async def get_blog_post(post_id: str, db: Session = Depends(get_db)):
 @router.post("/posts", response_model=BlogPostResponse, status_code=status.HTTP_201_CREATED)
 async def create_blog_post(
     post_data: BlogPostCreate,
-    authorization: str = None,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     db: Session = Depends(get_db)
 ):
     """Create new blog post"""
@@ -168,7 +168,7 @@ async def create_blog_post(
 async def update_blog_post(
     post_id: str,
     post_data: BlogPostUpdate,
-    authorization: str = None,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     db: Session = Depends(get_db)
 ):
     """Update blog post"""
@@ -225,7 +225,7 @@ async def update_blog_post(
 @router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_blog_post(
     post_id: str,
-    authorization: str = None,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     db: Session = Depends(get_db)
 ):
     """Delete blog post"""
@@ -258,7 +258,7 @@ async def delete_blog_post(
 @router.post("/posts/{post_id}/like", status_code=status.HTTP_200_OK)
 async def like_blog_post(
     post_id: str,
-    authorization: str = None,
+    authorization: Optional[str] = Header(None, alias="Authorization"),
     db: Session = Depends(get_db)
 ):
     """Like a blog post"""
