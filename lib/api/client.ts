@@ -49,11 +49,21 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Only handle 401 errors for non-admin endpoints to avoid redirect loop
+    // Admin endpoints should handle their own authentication errors
     if (error.response?.status === 401) {
-      // Unauthorized - clear token and redirect to login
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token')
-        window.location.href = '/login'
+      const url = error.config?.url || ''
+      const isAdminEndpoint = url.includes('/admin/')
+      const isAuthEndpoint = url.includes('/auth/me') || url.includes('/auth/login')
+      
+      // Don't redirect immediately - let components handle errors
+      // Only clear token if it's clearly invalid (not for admin endpoints that might have custom error handling)
+      if (!isAdminEndpoint && !isAuthEndpoint) {
+        // Clear invalid token but don't redirect immediately
+        // Components should check and redirect themselves
+        if (typeof window !== 'undefined') {
+          console.warn('401 Unauthorized - token may be invalid:', url)
+        }
       }
     }
     return Promise.reject(error)

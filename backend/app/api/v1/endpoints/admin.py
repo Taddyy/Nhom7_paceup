@@ -2,7 +2,7 @@
 Admin endpoints
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import decode_access_token
@@ -22,7 +22,10 @@ class AdminStats(BaseModel):
     total_posts: int
     total_events: int
 
-def get_current_admin(authorization: str = None, db: Session = Depends(get_db)) -> User:
+def get_current_admin(
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+    db: Session = Depends(get_db)
+) -> User:
     """Extract user from token and verify admin role"""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
@@ -45,7 +48,6 @@ def get_current_admin(authorization: str = None, db: Session = Depends(get_db)) 
 
 @router.get("/stats", response_model=AdminStats)
 async def get_admin_stats(
-    authorization: str = None, # Passed in header, handled by get_current_admin
     current_admin: User = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):

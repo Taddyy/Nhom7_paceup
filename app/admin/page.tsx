@@ -29,12 +29,37 @@ export default function AdminDashboard() {
 
   const checkAdminAccess = async () => {
     try {
+      setIsLoading(true)
       const user = await getCurrentUser()
-      if (user.email !== 'admin@gmail.com' && user.role !== 'admin') {
-        router.push('/') // Redirect non-admins
+      
+      // Check if user is admin
+      if (user.role !== 'admin' && user.email !== 'admin@gmail.com') {
+        // Not an admin, redirect to home
+        router.push('/')
+        return
       }
-    } catch (error) {
-      router.push('/login')
+      
+      // Admin access confirmed, fetch initial data
+      await fetchStats()
+    } catch (error: any) {
+      console.error('Admin access check failed:', error)
+      
+      // Check if it's an authentication error
+      if (error?.response?.status === 401 || error?.message?.includes('401')) {
+        // Clear token and redirect to login
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token')
+        }
+        router.push('/login')
+      } else {
+        // Other errors - show error message but don't redirect immediately
+        setToast({ 
+          message: 'Lỗi khi kiểm tra quyền admin. Vui lòng thử lại.', 
+          type: 'error', 
+          isVisible: true 
+        })
+        setIsLoading(false)
+      }
     }
   }
 
@@ -42,8 +67,25 @@ export default function AdminDashboard() {
     try {
       const data = await getAdminStats()
       setStats(data)
-    } catch (error) {
-      console.error(error)
+    } catch (error: any) {
+      console.error('Failed to fetch admin stats:', error)
+      
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        // Token invalid or expired
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token')
+          router.push('/login')
+          return
+        }
+      }
+      
+      // Show error message for other errors
+      setToast({ 
+        message: 'Lỗi khi tải dữ liệu. Vui lòng thử lại.', 
+        type: 'error', 
+        isVisible: true 
+      })
     } finally {
       setIsLoading(false)
     }
@@ -53,8 +95,23 @@ export default function AdminDashboard() {
     try {
       const data = await getAdminPosts('pending')
       setPosts(data)
-    } catch (error) {
-      console.error(error)
+    } catch (error: any) {
+      console.error('Failed to fetch admin posts:', error)
+      
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token')
+          router.push('/login')
+          return
+        }
+      }
+      
+      setToast({ 
+        message: 'Lỗi khi tải danh sách bài viết.', 
+        type: 'error', 
+        isVisible: true 
+      })
     }
   }
 
@@ -62,8 +119,23 @@ export default function AdminDashboard() {
     try {
       const data = await getAdminEvents('pending')
       setEvents(data)
-    } catch (error) {
-      console.error(error)
+    } catch (error: any) {
+      console.error('Failed to fetch admin events:', error)
+      
+      // Handle authentication errors
+      if (error?.response?.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token')
+          router.push('/login')
+          return
+        }
+      }
+      
+      setToast({ 
+        message: 'Lỗi khi tải danh sách sự kiện.', 
+        type: 'error', 
+        isVisible: true 
+      })
     }
   }
 
