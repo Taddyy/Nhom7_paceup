@@ -44,15 +44,19 @@ export default function AdminDashboard() {
     } catch (error: any) {
       console.error('Admin access check failed:', error)
       
-      // Check if it's an authentication error
-      if (error?.response?.status === 401 || error?.message?.includes('401')) {
-        // Clear token and redirect to login
+      // Only clear token if it's a real 401 Unauthorized error
+      // Network errors or timeouts should not clear the token
+      const isUnauthorized = error?.response?.status === 401
+      
+      if (isUnauthorized) {
+        // Token is actually invalid - clear it and redirect
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token')
         }
         router.push('/login')
       } else {
-        // Other errors - show error message but don't redirect immediately
+        // Other errors (network, timeout, etc.) - show error but don't redirect
+        // Allow user to retry without losing session
         setToast({ 
           message: 'Lỗi khi kiểm tra quyền admin. Vui lòng thử lại.', 
           type: 'error', 
@@ -70,14 +74,15 @@ export default function AdminDashboard() {
     } catch (error: any) {
       console.error('Failed to fetch admin stats:', error)
       
-      // Handle authentication errors
+      // Only clear token if it's a real 401 Unauthorized error
+      // Don't clear for network errors or timeouts
       if (error?.response?.status === 401) {
-        // Token invalid or expired
+        // Token invalid or expired - clear it and redirect
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token')
-          router.push('/login')
-          return
         }
+        router.push('/login')
+        return
       }
       
       // Show error message for other errors
@@ -98,13 +103,13 @@ export default function AdminDashboard() {
     } catch (error: any) {
       console.error('Failed to fetch admin posts:', error)
       
-      // Handle authentication errors
+      // Only clear token if it's a real 401 Unauthorized error
       if (error?.response?.status === 401) {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token')
-          router.push('/login')
-          return
         }
+        router.push('/login')
+        return
       }
       
       setToast({ 
@@ -122,13 +127,13 @@ export default function AdminDashboard() {
     } catch (error: any) {
       console.error('Failed to fetch admin events:', error)
       
-      // Handle authentication errors
+      // Only clear token if it's a real 401 Unauthorized error
       if (error?.response?.status === 401) {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token')
-          router.push('/login')
-          return
         }
+        router.push('/login')
+        return
       }
       
       setToast({ 

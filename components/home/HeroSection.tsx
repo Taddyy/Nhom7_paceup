@@ -71,8 +71,19 @@ export default function HeroSection() {
         const [profile, userStats] = await Promise.all([getCurrentUser(), getUserStats()])
         setUserName(profile?.full_name ?? profile?.email ?? '')
         setStats(userStats)
-      } catch (error) {
+      } catch (error: any) {
         console.error('Không thể tải thông tin người dùng:', error)
+        // Only clear token if it's a real 401 Unauthorized error
+        // Don't clear for network errors or timeouts
+        const isUnauthorized = error?.response?.status === 401
+        
+        if (isUnauthorized) {
+          // Token is actually invalid - clear it
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('token')
+          }
+        }
+        
         setIsAuthenticated(false)
         setStats(null)
         setUserName('')

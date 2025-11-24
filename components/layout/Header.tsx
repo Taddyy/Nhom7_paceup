@@ -56,7 +56,20 @@ export default function Header({ floating = false }: HeaderProps) {
         // Force update role from profile or specific email
         const userRole = (profile?.email === 'admin@gmail.com' || profile?.role === 'admin') ? 'admin' : 'user'
         setRole(userRole)
-      } catch {
+      } catch (error: any) {
+        // Only clear token and logout if it's a real 401 Unauthorized error
+        // Don't clear token for network errors, timeouts, or other temporary issues
+        const isUnauthorized = error?.response?.status === 401
+        
+        if (isUnauthorized) {
+          // Token is actually invalid - clear it
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('token')
+          }
+        }
+        
+        // Only update UI state - don't clear token for non-401 errors
+        // This allows retry on network errors without losing session
         setIsLoggedIn(false)
         setInitials('')
         setAvatar(null)
