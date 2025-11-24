@@ -172,49 +172,87 @@ export default function ProfilePage() {
       
       setIsSaving(true)
       
-      // Step 1: Crop and compress image (adaptive compression will optimize quality)
-      // This may take a moment as it tries different quality levels
-      const croppedImageBlob = await getCroppedImg(
-        imageSrc,
-        croppedAreaPixels
-      )
-
-      if (!croppedImageBlob) {
-        throw new Error('Không thể xử lý ảnh. Vui lòng thử lại.')
-      }
-
-      // Log compression info for debugging
-      const fileSizeKB = Math.round(croppedImageBlob.size / 1024)
-      console.log(`Image compressed to: ${fileSizeKB}KB`)
-
-      // Create form data to upload
-      const formData = new FormData()
-      formData.append('file', croppedImageBlob, 'avatar.jpg')
-
-      // Step 2: Upload to API
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || errorData.message || 'Upload failed')
-      }
-
-      const data = await response.json()
+      let croppedImageBlob: Blob | null = null
+      let uploadAttempts = 0
+      const maxUploadAttempts = 3
       
-      if (!data.url) {
-        throw new Error('No image URL returned from upload')
+      // Retry loop: compress and upload, retry with more aggressive compression if needed
+      while (uploadAttempts < maxUploadAttempts) {
+        uploadAttempts++
+        
+        try {
+          // Step 1: Crop and compress image
+          // On retry, use forceSmaller flag for more aggressive compression
+          croppedImageBlob = await getCroppedImg(
+            imageSrc,
+            croppedAreaPixels,
+            0, // rotation
+            { horizontal: false, vertical: false }, // flip
+            uploadAttempts > 1 // forceSmaller on retry
+          )
+
+          if (!croppedImageBlob) {
+            // This should never happen with improved compression, but handle it gracefully
+            throw new Error('Không thể xử lý ảnh. Vui lòng thử lại.')
+          }
+
+          // Log compression info for debugging
+          const fileSizeKB = Math.round(croppedImageBlob.size / 1024)
+          console.log(`Upload attempt ${uploadAttempts}: Image compressed to ${fileSizeKB}KB`)
+
+          // Create form data to upload
+          const formData = new FormData()
+          formData.append('file', croppedImageBlob, 'avatar.jpg')
+
+          // Step 2: Upload to API
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            const errorMessage = errorData.error || errorData.message || 'Upload failed'
+            
+            // If error indicates we should retry (size error with retry flag) and we have retries left
+            if ((errorMessage.includes('quá lớn') || errorData.retry) && uploadAttempts < maxUploadAttempts) {
+              console.log(`Upload failed due to size, retrying with more aggressive compression (attempt ${uploadAttempts + 1}/${maxUploadAttempts})`)
+              // Wait a bit before retrying to allow UI to update
+              await new Promise(resolve => setTimeout(resolve, 100))
+              // Continue to retry with forceSmaller flag
+              continue
+            }
+            
+            throw new Error(errorMessage)
+          }
+
+          const data = await response.json()
+          
+          if (!data.url) {
+            throw new Error('No image URL returned from upload')
+          }
+          
+          // Step 3: Update profile with new avatar URL
+          await updateProfile({ avatar: data.url })
+          window.dispatchEvent(new Event('user:updated'))
+          
+          setToast({ message: 'Cập nhật ảnh đại diện thành công!', type: 'success', isVisible: true })
+          setIsCropModalOpen(false)
+          fetchUserData()
+          return // Success, exit retry loop
+          
+        } catch (uploadError: any) {
+          // If this is not a size error or we're out of retries, throw immediately
+          if (!uploadError.message?.includes('quá lớn') || uploadAttempts >= maxUploadAttempts) {
+            throw uploadError
+          }
+          // Otherwise, continue retry loop
+        }
       }
       
-      // Step 3: Update profile with new avatar URL
-      await updateProfile({ avatar: data.url })
-      window.dispatchEvent(new Event('user:updated'))
+      // Should never reach here, but just in case
+      throw new Error('Không thể upload ảnh sau nhiều lần thử.')
       
-      setToast({ message: 'Cập nhật ảnh đại diện thành công!', type: 'success', isVisible: true })
-      setIsCropModalOpen(false)
-      fetchUserData()
     } catch (e: any) {
       console.error('Upload error:', e)
       const errorMessage = e?.response?.data?.detail || e?.message || 'Lỗi khi cập nhật ảnh.'
