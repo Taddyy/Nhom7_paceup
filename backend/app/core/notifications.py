@@ -27,7 +27,7 @@ def create_notification(
         title=title,
         message=message,
         related_id=related_id,
-        metadata=metadata_str,
+        metadata_json=metadata_str,
         is_read=False
     )
     

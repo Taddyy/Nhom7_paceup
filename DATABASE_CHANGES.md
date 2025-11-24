@@ -50,7 +50,7 @@ CREATE TABLE notifications (
     message TEXT NOT NULL,
     related_id VARCHAR(255) DEFAULT NULL,
     is_read BOOLEAN DEFAULT FALSE NOT NULL,
-    metadata TEXT DEFAULT NULL,
+    metadata_json TEXT DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     INDEX idx_user_id (user_id)

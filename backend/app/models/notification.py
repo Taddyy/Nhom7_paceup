@@ -18,7 +18,7 @@ class Notification(Base):
     message = Column(Text, nullable=False)
     related_id = Column(String(255), nullable=True)  # ID of related post, event, blog, etc.
     is_read = Column(Boolean, default=False, nullable=False)
-    metadata = Column(Text, nullable=True)  # JSON string for additional data (rejection reasons, etc.)
+    metadata_json = Column(Text, nullable=True)  # JSON string for additional data (rejection reasons, etc.)
     created_at = Column(DateTime, server_default=func.now())
 
     # Relationships

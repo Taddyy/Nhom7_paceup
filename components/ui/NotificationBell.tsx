@@ -12,7 +12,7 @@ export interface Notification {
   message: string
   related_id?: string
   is_read: boolean
-  metadata?: string
+  metadata_json?: string
   created_at: string
 }
 
@@ -113,9 +113,9 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   }
 
   const formatNotificationMessage = (notification: Notification): string => {
-    if (notification.type === 'event_rejected' && notification.metadata) {
+    if (notification.type === 'event_rejected' && notification.metadata_json) {
       try {
-        const metadata = JSON.parse(notification.metadata)
+        const metadata = JSON.parse(notification.metadata_json)
         if (metadata.reasons && metadata.reasons.length > 0) {
           return `${notification.message}\nLý do: ${metadata.reasons.join(', ')}`
         }

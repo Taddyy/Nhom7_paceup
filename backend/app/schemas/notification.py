@@ -14,7 +14,7 @@ class NotificationResponse(BaseModel):
     message: str
     related_id: Optional[str] = None
     is_read: bool
-    metadata: Optional[str] = None
+    metadata_json: Optional[str] = None
     created_at: datetime
 
     class Config:
