@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { getCurrentUser, getUserStats, type UserStats } from '@/lib/api/auth-service'
+import CustomSelect from '@/components/ui/CustomSelect'
 
 /**
  * Hero section component matching Figma design.
@@ -153,34 +154,28 @@ export default function HeroSection() {
 
             {/* Location Picker */}
             <div className="flex gap-2">
-              <div className="bg-[#f3f3f3] border border-[rgba(182,182,182,0.1)] rounded-[12px] px-3 py-0 h-[50px] flex items-center gap-2 w-[246px]">
-                <Image src="/Icon/city.svg" alt="" width={12} height={15} />
-                <select
-                  value={selectedCity}
-                  onChange={(event) => setSelectedCity(event.target.value)}
-                  className="w-full bg-transparent text-[17px] text-[#252525] focus:outline-none"
-                >
-                  {cityOptions.map((option) => (
-                    <option key={option} value={option} className="text-[#252525]">
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="bg-[#f3f3f3] border border-[rgba(182,182,182,0.2)] rounded-[12px] px-3 py-0 h-[50px] flex items-center gap-2 w-[233px]">
-                <Image src="/Icon/ward.svg" alt="" width={14} height={14} />
-                <select
-                  value={selectedWard}
-                  onChange={(event) => setSelectedWard(event.target.value)}
-                  className="w-full bg-transparent text-[17px] text-[#252525] focus:outline-none"
-                >
-                  {(wardOptionsByCity[selectedCity] ?? []).map((option) => (
-                    <option key={option} value={option} className="text-[#252525]">
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CustomSelect
+                options={cityOptions.map((city) => ({
+                  label: city,
+                  value: city
+                }))}
+                value={selectedCity}
+                onChange={(value) => setSelectedCity(value)}
+                icon="/Icon/city.svg"
+                width="246px"
+                variant="hero"
+              />
+              <CustomSelect
+                options={(wardOptionsByCity[selectedCity] ?? []).map((ward) => ({
+                  label: ward,
+                  value: ward
+                }))}
+                value={selectedWard}
+                onChange={(value) => setSelectedWard(value)}
+                icon="/Icon/ward.svg"
+                width="233px"
+                variant="hero"
+              />
               <button
                 type="button"
                 onClick={handleSearch}

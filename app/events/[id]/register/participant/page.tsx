@@ -13,6 +13,7 @@ import StepIndicator, {
   STEP_ICON_PATHS,
   type StepConfig
 } from '@/components/register/StepIndicator'
+import CustomSelect from '@/components/ui/CustomSelect'
 
 interface RegistrationEventInfo {
   id: string
@@ -320,9 +321,9 @@ export default function EventRegistrationStepTwoPage() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-4 rounded-[24px] border border-neutral-200 bg-white p-6 shadow-sm items-center">
+          <div className="flex flex-col gap-4 rounded-[24px] border border-neutral-200 bg-white p-6 shadow-sm">
             {CONSENT_ITEMS.map((consent) => (
-              <label key={consent.id} className="flex items-center gap-4 text-sm text-neutral-700 justify-center w-full">
+              <label key={consent.id} className="flex items-center gap-4 text-sm text-neutral-700">
                 <span
                   role="checkbox"
                   aria-checked={consents[consent.id]}
@@ -334,7 +335,7 @@ export default function EventRegistrationStepTwoPage() {
                       toggleConsent(consent.id)
                     }
                   }}
-                  className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-2 transition ${
+                  className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-2 transition flex-shrink-0 ${
                     consents[consent.id]
                       ? 'border-[#1f1f1f] bg-[#1f1f1f]'
                       : 'border-neutral-300 bg-white'
@@ -344,13 +345,13 @@ export default function EventRegistrationStepTwoPage() {
                     <Image src="/Icon/check.svg" alt="Đã chọn" width={18} height={18} />
                   )}
                 </span>
-                <span className="text-center">
+                <span>
                   {consent.label}{' '}
                   {consent.required && <span className="text-neutral-400">(bắt buộc)</span>}
                 </span>
               </label>
             ))}
-            {consentError && <p className="text-sm text-red-500 text-center">{consentError}</p>}
+            {consentError && <p className="text-sm text-red-500">{consentError}</p>}
           </div>
 
           <div className="rounded-[24px] border border-neutral-200 bg-white/80 p-6 shadow-lg backdrop-blur-lg">
@@ -478,14 +479,17 @@ function FormField({
     return (
       <div>
         {label}
-        <select {...commonProps}>
-          <option value="">Chọn kích cỡ áo</option>
-          {SHIRT_SIZES.map((size) => (
-            <option key={size} value={size}>
-              {size}
-            </option>
-          ))}
-        </select>
+        <CustomSelect
+          options={[
+            { label: 'Chọn kích cỡ áo', value: '' },
+            ...SHIRT_SIZES.map((size) => ({ label: size, value: size }))
+          ]}
+          value={value}
+          onChange={(val) => onChange(field.id, val)}
+          placeholder="Chọn kích cỡ áo"
+          error={Boolean(error)}
+          variant="default"
+        />
         {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
       </div>
     )
@@ -495,14 +499,17 @@ function FormField({
     return (
       <div>
         {label}
-        <select {...commonProps}>
-          <option value="">Chọn nhóm máu</option>
-          {BLOOD_TYPES.map((group) => (
-            <option key={group} value={group}>
-              {group}
-            </option>
-          ))}
-        </select>
+        <CustomSelect
+          options={[
+            { label: 'Chọn nhóm máu', value: '' },
+            ...BLOOD_TYPES.map((group) => ({ label: group, value: group }))
+          ]}
+          value={value}
+          onChange={(val) => onChange(field.id, val)}
+          placeholder="Chọn nhóm máu"
+          error={Boolean(error)}
+          variant="default"
+        />
         {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
       </div>
     )

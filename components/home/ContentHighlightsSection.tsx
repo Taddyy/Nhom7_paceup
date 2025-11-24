@@ -6,6 +6,7 @@ import type { ChangeEvent, FormEvent } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createBlogPost } from '@/lib/api/blog-service'
 import RichTextEditor from '@/components/ui/RichTextEditor'
+import DropdownMenu, { type DropdownOption } from '@/components/ui/DropdownMenu'
 
 export interface ContentHighlight {
   id: string
@@ -252,13 +253,15 @@ export default function ContentHighlightsSection({ posts, articles, showCreateBu
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-8 w-full">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="flex flex-col w-full">
+            <div className="columns-1 lg:columns-2" style={{ columnGap: '40px' }}>
               {localArticles.map((article) => (
-                <ArticleCard key={article.id} article={article} />
+                <div key={article.id} className="break-inside-avoid mb-6">
+                  <ArticleCard article={article} />
+                </div>
               ))}
             </div>
-            <div className="w-full flex justify-center">
+            <div className="w-full flex justify-center mt-10">
               <Link
                 href="/content"
                 className="bg-[#1c1c1c] inline-flex items-center justify-center px-5 py-2 rounded-lg text-white uppercase text-sm tracking-wide shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.4),inset_4px_4px_6px_rgba(255,255,255,0.15)]"
@@ -285,6 +288,20 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
   const [imagePreviews, setImagePreviews] = useState<CommentAttachment[]>([])
   const [videoPreviews, setVideoPreviews] = useState<CommentAttachment[]>([])
   const [commentList, setCommentList] = useState<ArticleComment[]>(article.comments)
+  const COMMENTS_PER_VIEW = 2
+  const [commentPage, setCommentPage] = useState(0)
+  
+  // Report and hide states
+  const [isReportOpen, setIsReportOpen] = useState(false)
+  const [isHidden, setIsHidden] = useState(false)
+  const [reportReasons, setReportReasons] = useState<string[]>([])
+  const [reportDescription, setReportDescription] = useState('')
+  const reportRef = useRef<HTMLDivElement>(null)
+  
+  useEffect(() => {
+    setCommentPage(0)
+  }, [commentList.length])
+
   const [activeSlide, setActiveSlide] = useState(0)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
@@ -460,85 +477,270 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
     setActiveSlide(clampedIndex)
   }
 
+  // Close report popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (reportRef.current && !reportRef.current.contains(event.target as Node) && isReportOpen) {
+        setIsReportOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isReportOpen])
+
+  const reportReasonsList = [
+    'Nội dung spam hoặc quảng cáo',
+    'Nội dung không phù hợp',
+    'Nội dung lừa đảo',
+    'Bạo lực hoặc đe dọa',
+    'Quấy rối hoặc bắt nạt',
+    'Vi phạm bản quyền',
+    'Khác'
+  ]
+
+  const handleReportReasonChange = (reason: string) => {
+    setReportReasons((prev) =>
+      prev.includes(reason) ? prev.filter((r) => r !== reason) : [...prev, reason]
+    )
+  }
+
+  const handleSubmitReport = () => {
+    if (reportReasons.length === 0) {
+      return
+    }
+    // Here you would typically send the report to the backend
+    console.log('Report submitted:', { reasons: reportReasons, description: reportDescription })
+    setIsReportOpen(false)
+    setReportReasons([])
+    setReportDescription('')
+    // Show success message (you can add a toast here)
+  }
+
+  const handleHidePost = () => {
+    setIsHidden(true)
+    setIsOptionsOpen(false)
+  }
+
+  const handleUnhidePost = () => {
+    setIsHidden(false)
+  }
+
+  const hasTitleOrCaption = (article.title && article.title.trim()) || (article.caption && article.caption.trim())
+  const hasMedia = limitedMedia.length > 0
+  const hasComments = commentList.length > 0
+
+  // If post is hidden, show hidden message
+  if (isHidden) {
+    return (
+      <article className="rounded-[32px] border border-red-200 bg-red-50 p-6 md:p-8 flex flex-col shadow-[0_25px_70px_rgba(15,23,42,0.08)]">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-red-600">
+            Bạn đã ẩn bài viết của <span className="font-semibold">{article.author}</span>
+          </p>
+          <button
+            type="button"
+            onClick={handleUnhidePost}
+            className="text-sm font-medium text-red-600 hover:text-red-700 underline"
+          >
+            Hoàn tác
+          </button>
+        </div>
+      </article>
+    )
+  }
+
   return (
-    <article className="rounded-[32px] border border-black/5 bg-white p-6 md:p-8 flex flex-col gap-6 shadow-[0_25px_70px_rgba(15,23,42,0.08)]">
-      <div className="flex items-center gap-4">
+    <article className="rounded-[32px] border border-black/5 bg-white p-6 md:p-8 flex flex-col shadow-[0_25px_70px_rgba(15,23,42,0.08)]">
+      <div className="flex items-center gap-4 relative">
         <div className="relative w-14 h-14 rounded-full overflow-hidden">
           <Image src={article.avatar} alt={article.author} fill sizes="56px" className="object-cover" />
         </div>
-        <div className="flex flex-col">
+        <div className="flex flex-col flex-1">
           <p className="font-semibold text-lg text-neutral-900">{article.author}</p>
           <p className="text-sm text-neutral-500">{article.timestamp}</p>
         </div>
-        <span className="ml-auto text-sm text-neutral-400">{article.handle}</span>
+        <span className="text-sm text-neutral-400">{article.handle}</span>
+        
+        {/* Options button */}
+        <DropdownMenu
+          options={[
+            {
+              label: 'Báo cáo',
+              value: 'report',
+              onClick: () => setIsReportOpen(true)
+            },
+            {
+              label: 'Ẩn',
+              value: 'hide',
+              onClick: handleHidePost
+            }
+          ]}
+          trigger={
+            <button
+              type="button"
+              className="p-1 hover:bg-neutral-100 rounded-full transition-colors"
+              aria-label="Tùy chọn"
+            >
+              <Image src="/Icon/more.svg" alt="Tùy chọn" width={24} height={24} />
+            </button>
+          }
+          align="right"
+        />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <h3 className="text-[24px] font-semibold leading-[32px] text-neutral-950">{article.title}</h3>
-        <p className="text-base text-neutral-600">{article.caption}</p>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <div className="relative w-full">
+      {/* Report Popup */}
+      {isReportOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div
-            ref={mediaContainerRef}
-            className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth touch-pan-x"
-            style={{ scrollbarWidth: 'none' }}
+            ref={reportRef}
+            className="bg-white rounded-[32px] border border-black/5 shadow-[0_25px_70px_rgba(15,23,42,0.08)] p-6 md:p-8 max-w-md w-full max-h-[90vh] overflow-y-auto"
           >
-            {limitedMedia.map((imageSrc) => (
-              <div
-                key={`${article.id}-${imageSrc}`}
-                className="relative aspect-square w-full flex-shrink-0 snap-center rounded-[24px] overflow-hidden"
-              >
-                <Image
-                  src={imageSrc}
-                  alt={article.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 600px"
-                  className="object-cover"
-                  draggable={false}
-                  priority={false}
-                />
-              </div>
-            ))}
-          </div>
-          {limitedMedia.length > 1 && (
-            <>
-              <button
-                type="button"
-                className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow-md transition hover:bg-white"
-                onClick={() => goToSlide(activeSlide - 1)}
-                aria-label="Xem ảnh trước"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 3L5 8L10 13" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow-md transition hover:bg-white"
-                onClick={() => goToSlide(activeSlide + 1)}
-                aria-label="Xem ảnh tiếp theo"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6 3L11 8L6 13" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-black/40 px-3 py-1">
-                {limitedMedia.map((_, index) => (
-                  <button
-                    type="button"
-                    key={`${article.id}-dot-${index}`}
-                    className={`h-2 w-2 rounded-full transition ${index === activeSlide ? 'bg-white' : 'bg-white/40'}`}
-                    aria-label={`Chuyển tới ảnh ${index + 1}`}
-                    onClick={() => goToSlide(index)}
+            <h3 className="text-xl font-semibold text-neutral-900 mb-4">Báo cáo bài viết</h3>
+            
+            <div className="flex flex-col gap-3 mb-6">
+              <label className="text-sm font-medium text-neutral-700">Lý do báo cáo (có thể chọn nhiều)</label>
+              {reportReasonsList.map((reason) => (
+                <label key={reason} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={reportReasons.includes(reason)}
+                    onChange={() => handleReportReasonChange(reason)}
+                    className="w-4 h-4 rounded border-neutral-300 text-[#1c1c1c] focus:ring-2 focus:ring-[#1c1c1c]"
                   />
-                ))}
-              </div>
-            </>
+                  <span className="text-sm text-neutral-700">{reason}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="mb-6">
+              <label htmlFor="report-description" className="block text-sm font-medium text-neutral-700 mb-2">
+                Mô tả thêm (tùy chọn)
+              </label>
+              <textarea
+                id="report-description"
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value)}
+                placeholder="Vui lòng mô tả chi tiết hơn..."
+                rows={4}
+                className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#1c1c1c] resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsReportOpen(false)
+                  setReportReasons([])
+                  setReportDescription('')
+                }}
+                className="flex-1 px-4 py-2 rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-50 transition-colors text-sm font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitReport}
+                disabled={reportReasons.length === 0}
+                className="flex-1 px-4 py-2 rounded-xl bg-[#1c1c1c] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                Gửi báo cáo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasTitleOrCaption && (
+        <div className="flex flex-col gap-2 mt-3">
+          {article.title && article.title.trim() && (
+            <h3 className="text-[24px] font-semibold leading-[32px] text-neutral-950">{article.title}</h3>
+          )}
+          {article.caption && article.caption.trim() && (
+            <p className="text-base text-neutral-600">{article.caption}</p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+      )}
+
+      {hasMedia ? (
+        <div className="flex flex-col gap-3 mt-3">
+          <div className="relative w-full">
+            <div
+              ref={mediaContainerRef}
+              className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth touch-pan-x"
+              style={{ scrollbarWidth: 'none' }}
+            >
+              {limitedMedia.map((imageSrc) => (
+                <div
+                  key={`${article.id}-${imageSrc}`}
+                  className="relative aspect-square w-full flex-shrink-0 snap-center rounded-[24px] overflow-hidden"
+                >
+                  <Image
+                    src={imageSrc}
+                    alt={article.title || 'Article media'}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 600px"
+                    className="object-cover"
+                    draggable={false}
+                    priority={false}
+                  />
+                </div>
+              ))}
+            </div>
+            {limitedMedia.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow-md transition hover:bg-white"
+                  onClick={() => goToSlide(activeSlide - 1)}
+                  aria-label="Xem ảnh trước"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 3L5 8L10 13" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 shadow-md transition hover:bg-white"
+                  onClick={() => goToSlide(activeSlide + 1)}
+                  aria-label="Xem ảnh tiếp theo"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 3L11 8L6 13" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-black/40 px-3 py-1">
+                  {limitedMedia.map((_, index) => (
+                    <button
+                      type="button"
+                      key={`${article.id}-dot-${index}`}
+                      className={`h-2 w-2 rounded-full transition ${index === activeSlide ? 'bg-white' : 'bg-white/40'}`}
+                      aria-label={`Chuyển tới ảnh ${index + 1}`}
+                      onClick={() => goToSlide(index)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition hover:bg-neutral-50 ${
+                isLiked ? 'bg-red-50 text-red-600 border-red-100' : 'bg-white text-neutral-600 border-black/5'
+              }`}
+              onClick={() => setIsLiked((prev) => !prev)}
+              aria-pressed={isLiked}
+            >
+              <HeartIcon filled={isLiked} />
+              {likeCountLabel} lượt thích
+            </button>
+          </div>
+        </div>
+        ) : (
+        <div className="flex items-center gap-2 mt-3">
           <button
             type="button"
             className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition hover:bg-neutral-50 ${
@@ -551,62 +753,96 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
             {likeCountLabel} lượt thích
           </button>
         </div>
-      </div>
+      )}
 
-      <div className="flex h-[200px] flex-col justify-end gap-3 overflow-hidden">
-        {commentList.length === 0 ? (
-          <div className="flex h-full items-center justify-center rounded-[24px] bg-[#f8f8fb] p-4 text-sm text-neutral-500">
-            Không có bình luận
-          </div>
-        ) : (
-          commentList.map((comment) => {
-            const legacyAttachments =
-              comment.attachment && !comment.media
-                ? [{ id: `${comment.id}-attachment`, type: 'image' as const, url: comment.attachment }]
-                : []
-            const attachments = comment.media ?? legacyAttachments
-            return (
-              <div key={comment.id} className="flex gap-3 rounded-[24px] bg-[#f8f8fb] p-4">
-                <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                  <Image src={comment.avatar} alt={comment.author} fill sizes="40px" className="object-cover" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm text-neutral-900">{comment.author}</p>
-                    <span className="text-xs text-neutral-500">{comment.timestamp}</span>
-                  </div>
-                  <p className="text-sm text-neutral-600 mt-1 whitespace-pre-line">{comment.content}</p>
-                  {attachments.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-3">
-                      {attachments.map((attachment) =>
-                        attachment.type === 'video' ? (
-                          <video
-                            key={attachment.id}
-                            src={attachment.url}
-                            className="h-[140px] w-[140px] rounded-2xl object-cover"
-                            controls
-                            muted
-                          />
-                        ) : (
-                          <img
-                            key={attachment.id}
-                            src={attachment.url}
-                            alt={`${comment.author} attachment`}
-                            className="h-[120px] w-[120px] aspect-square rounded-2xl object-cover"
-                            loading="lazy"
-                          />
-                        )
+      {hasComments && (
+        <div className="flex flex-col gap-3 mt-3">
+          {commentList
+            .slice(commentPage * COMMENTS_PER_VIEW, commentPage * COMMENTS_PER_VIEW + COMMENTS_PER_VIEW)
+            .map((comment) => {
+                const legacyAttachments =
+                  comment.attachment && !comment.media
+                    ? [{ id: `${comment.id}-attachment`, type: 'image' as const, url: comment.attachment }]
+                    : []
+                const attachments = comment.media ?? legacyAttachments
+                return (
+                  <div key={comment.id} className="flex gap-3 rounded-[24px] bg-[#f8f8fb] p-4">
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                      <Image src={comment.avatar} alt={comment.author} fill sizes="40px" className="object-cover" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium text-sm text-neutral-900">{comment.author}</p>
+                        <span className="text-xs text-neutral-500">{comment.timestamp}</span>
+                      </div>
+                      <p className="text-sm text-neutral-600 mt-1 whitespace-pre-line">{comment.content}</p>
+                      {attachments.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-3">
+                          {attachments.map((attachment) =>
+                            attachment.type === 'video' ? (
+                              <video
+                                key={attachment.id}
+                                src={attachment.url}
+                                className="h-[140px] w-[140px] rounded-2xl object-cover"
+                                controls
+                                muted
+                              />
+                            ) : (
+                              <img
+                                key={attachment.id}
+                                src={attachment.url}
+                                alt={`${comment.author} attachment`}
+                                className="h-[120px] w-[120px] aspect-square rounded-2xl object-cover"
+                                loading="lazy"
+                              />
+                            )
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-              </div>
-            )
-          })
-        )}
-      </div>
+                  </div>
+                )
+              })}
 
-      <form className="rounded-[28px] border border-black/5 bg-white p-4" onSubmit={handleSubmit}>
+          {commentList.length > COMMENTS_PER_VIEW && (
+            <div className="flex items-center justify-between px-2">
+              <button
+                type="button"
+                onClick={() => setCommentPage((prev) => Math.max(0, prev - 1))}
+                className="rounded-full border border-black/10 p-2 text-xs font-medium text-neutral-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={commentPage === 0}
+              >
+                Lên
+              </button>
+              <div className="flex items-center gap-2 text-xs text-neutral-500">
+                {Array.from({ length: Math.ceil(commentList.length / COMMENTS_PER_VIEW) }).map((_, index) => (
+                  <button
+                    key={`comment-dot-${index}`}
+                    onClick={() => setCommentPage(index)}
+                    type="button"
+                    className={`h-2.5 w-2.5 rounded-full transition ${
+                      index === commentPage ? 'bg-neutral-900' : 'bg-neutral-300'
+                    }`}
+                    aria-label={`Xem trang bình luận ${index + 1}`}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setCommentPage((prev) => Math.min(Math.ceil(commentList.length / COMMENTS_PER_VIEW) - 1, prev + 1))
+                }
+                className="rounded-full border border-black/10 p-2 text-xs font-medium text-neutral-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={commentPage >= Math.ceil(commentList.length / COMMENTS_PER_VIEW) - 1}
+              >
+                Xuống
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <form className="rounded-[28px] border border-black/5 bg-white p-4 mt-3" onSubmit={handleSubmit}>
         <label htmlFor={`comment-${article.id}`} className="sr-only">
           Viết bình luận
         </label>
