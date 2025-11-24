@@ -60,29 +60,38 @@ try:
         connect_args=connect_args
     )
     logger.info(f"Database engine created successfully for database: '{db_name}' (URL: {settings.DATABASE_URL[:50]}...)")
+    # Create SessionLocal after successful engine creation
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 except Exception as e:
     logger.error(f"Failed to create database engine: {e}", exc_info=True)
-    # Don't raise here - let the app start and fail later when actually connecting
-    # This prevents import failures that would crash the entire function
-    # Create a dummy engine that will fail on first use
-    from sqlalchemy import create_engine as create_dummy_engine
-    engine = create_dummy_engine("sqlite:///:memory:")  # Dummy engine
-    logger.warning("Using dummy engine - database connection will fail on first use")
-
-# Only create SessionLocal if engine was created successfully
-if engine is not None:
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-else:
+    # Set engine and SessionLocal to None to indicate failure
+    # This will be checked in get_db() to provide a clear error message
+    engine = None
     SessionLocal = None
+    logger.error("Database engine creation failed. The application will not be able to connect to the database.")
 
 Base = declarative_base()
 
 
 def get_db():
-    """Dependency for getting database session"""
+    """
+    Dependency for getting database session.
+    
+    Raises:
+        RuntimeError: If database session factory is not available
+    """
+    if SessionLocal is None:
+        error_msg = "Database session factory is not available. Check database configuration and connection."
+        logger.error(error_msg)
+        raise RuntimeError(error_msg)
+    
     db = SessionLocal()
     try:
         yield db
+    except Exception:
+        # Rollback on exception
+        db.rollback()
+        raise
     finally:
         db.close()
 
