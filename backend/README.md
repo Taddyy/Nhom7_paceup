@@ -49,3 +49,25 @@ alembic revision --autogenerate -m "Description"
 alembic upgrade head
 ```
 
+## Media Storage Configuration
+
+The upload pipeline now relies on two external providers:
+
+### Cloudinary (images)
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+- `CLOUDINARY_UPLOAD_FOLDER` (optional, defaults to `paceup`)
+
+These variables are used by the Next.js API route (`app/api/upload/route.ts`) to store avatars/post thumbnails. When unset, the route falls back to inline base64 strings for local development.
+
+### Cloudflare R2 (documents + previews)
+- `CLOUDFLARE_R2_ACCOUNT_ID`
+- `CLOUDFLARE_R2_ACCESS_KEY_ID`
+- `CLOUDFLARE_R2_SECRET_ACCESS_KEY`
+- `CLOUDFLARE_R2_BUCKET`
+- `CLOUDFLARE_R2_ENDPOINT` (optional, inferred from account ID)
+- `CLOUDFLARE_R2_PUBLIC_DOMAIN` (optional CDN/domain for serving files)
+
+Endpoints under `/api/v1/documents` now stream uploads to R2 and fall back to base64 previews if the bucket is temporarily unavailable.
+

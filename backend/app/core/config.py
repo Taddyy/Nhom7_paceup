@@ -28,11 +28,29 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
+        "http://localhost:3003",
+        "http://127.0.0.1:3003",
         "https://paceup.vercel.app",
         "https://nhom7-paceup.vercel.app",
         "https://nhom7-paceup-git-main-taddyuiux-4154s-projects.vercel.app",
     ]
     
+    # Cloudinary (used by frontend, documented here for completeness)
+    CLOUDINARY_CLOUD_NAME: str | None = os.getenv("CLOUDINARY_CLOUD_NAME")
+    CLOUDINARY_API_KEY: str | None = os.getenv("CLOUDINARY_API_KEY")
+    CLOUDINARY_API_SECRET: str | None = os.getenv("CLOUDINARY_API_SECRET")
+
+    # Cloudflare R2
+    CLOUDFLARE_R2_ACCOUNT_ID: str | None = os.getenv("CLOUDFLARE_R2_ACCOUNT_ID")
+    CLOUDFLARE_R2_ACCESS_KEY_ID: str | None = os.getenv("CLOUDFLARE_R2_ACCESS_KEY_ID")
+    CLOUDFLARE_R2_SECRET_ACCESS_KEY: str | None = os.getenv("CLOUDFLARE_R2_SECRET_ACCESS_KEY")
+    CLOUDFLARE_R2_BUCKET: str | None = os.getenv("CLOUDFLARE_R2_BUCKET")
+    CLOUDFLARE_R2_ENDPOINT: str | None = os.getenv("CLOUDFLARE_R2_ENDPOINT")
+    CLOUDFLARE_R2_PUBLIC_DOMAIN: str | None = os.getenv("CLOUDFLARE_R2_PUBLIC_DOMAIN")
+
     # Pydantic v2 config
     model_config = SettingsConfigDict(
         env_file=".env",
