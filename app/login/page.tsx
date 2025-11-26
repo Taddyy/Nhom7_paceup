@@ -27,6 +27,17 @@ export default function LoginPage() {
   const [isToastVisible, setIsToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
 
+  // Đồng bộ token Google từ query ?googleToken=... và chuyển user về trang chủ
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const googleToken = params.get('googleToken')
+    if (googleToken) {
+      localStorage.setItem('token', googleToken)
+      router.replace('/')
+    }
+  }, [router])
+
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) {

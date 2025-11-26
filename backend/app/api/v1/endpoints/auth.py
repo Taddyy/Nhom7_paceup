@@ -153,8 +153,10 @@ async def google_callback(
 
     access_token = create_access_token({"sub": user.id})
 
+    # Redirect về trang login với token trong query để frontend lưu vào localStorage
     response = RedirectResponse(
-        url="https://nhom7-paceup.vercel.app/", status_code=status.HTTP_302_FOUND
+        url=f"https://nhom7-paceup.vercel.app/login?googleToken={access_token}",
+        status_code=status.HTTP_302_FOUND,
     )
     response.set_cookie(
         "access_token",
