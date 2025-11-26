@@ -201,19 +201,18 @@ export default async function getCroppedImg(
   const DATA_URL_PREFIX_LENGTH = 23 // "data:image/jpeg;base64,"
   const BASE64_OVERHEAD = 4 / 3 // Base64 encoding ratio
   
-  // Target: 150KB raw file ensures data URL < 4800 chars (very safe)
-  // Use smaller target if forceSmaller is true
-  const TARGET_FILE_SIZE = forceSmaller ? 100 * 1024 : 150 * 1024 // 100KB if forced, 150KB otherwise
+  // Target size tuned for Cloudinary uploads (we no longer store avatars as tiny data URLs).
+  // Use a slightly smaller target on aggressive retries, but keep enough bytes for good quality.
+  const TARGET_FILE_SIZE = forceSmaller ? 250 * 1024 : 400 * 1024 // ~250KB if forced, ~400KB otherwise
   
   // Calculate max raw bytes that would fit
   // (raw_bytes * BASE64_OVERHEAD) + DATA_URL_PREFIX_LENGTH <= MAX_DATA_URL_LENGTH
   const maxRawBytes = Math.floor((MAX_DATA_URL_LENGTH - DATA_URL_PREFIX_LENGTH) / BASE64_OVERHEAD)
   
-  // Progressive compression strategy: try multiple dimensions and qualities
-  // We'll keep trying smaller dimensions until we find one that fits
-  // Start with smaller dimensions if forceSmaller
-  const normalDimensions = [800, 700, 600, 500, 400, 350, 300, 250, 200, 180, 150, 120, 100, 80, 60]
-  const aggressiveDimensions = [200, 150, 120, 100, 80, 60, 50, 40]
+  // Progressive compression strategy: try multiple dimensions and qualities.
+  // Start from larger dimensions to preserve more detail when possible.
+  const normalDimensions = [1200, 1000, 900, 800, 700, 600, 500, 400, 350, 300, 250, 200]
+  const aggressiveDimensions = [600, 500, 400, 350, 300, 250, 200, 180, 150, 120, 100, 80, 60]
   const dimensionsToTry = forceSmaller ? aggressiveDimensions : normalDimensions
   let bestBlob: Blob | null = null
   let bestSize = Infinity

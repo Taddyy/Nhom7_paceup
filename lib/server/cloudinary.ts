@@ -64,9 +64,8 @@ export async function uploadImageToCloudinary(buffer: Buffer, contentType?: stri
         use_filename: true,
         unique_filename: true,
         overwrite: false,
-        transformation: [
-          { quality: 'auto', fetch_format: 'auto' },
-        ],
+        // Let Cloudinary choose an efficient format but keep good visual quality.
+        transformation: [{ quality: 'auto:good', fetch_format: 'auto' }],
       },
       (error?: UploadApiErrorResponse, result?: UploadApiResponse) => {
         if (error || !result) {

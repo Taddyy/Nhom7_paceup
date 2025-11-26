@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getCurrentUser, updateProfile, getJoinedEvents, logout, type UserUpdate, type User } from '@/lib/api/auth-service'
-import { getBlogPosts, type BlogPost } from '@/lib/api/blog-service'
+import { deleteBlogPost, getBlogPosts, type BlogPost } from '@/lib/api/blog-service'
 import { getEvents, type Event } from '@/lib/api/events'
 import EventCard from '@/components/events/EventCard'
 import Toast from '@/components/ui/Toast'
@@ -24,7 +24,7 @@ const DISABLED_INPUT_CLASS =
 
 // const INPUT_CLASS = ...
 
-type Tab = 'profile' | 'posts' | 'events_joined' | 'events_created'
+type Tab = 'profile' | 'articles' | 'blogs' | 'events_joined' | 'events_created'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -57,7 +57,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user?.id) {
-      if (activeTab === 'posts') fetchMyPosts()
+      if (activeTab === 'blogs') fetchMyPosts()
       if (activeTab === 'events_joined') fetchJoinedEvents()
       if (activeTab === 'events_created') fetchCreatedEvents()
     }
@@ -93,6 +93,20 @@ export default function ProfilePage() {
       setMyPosts(res.posts)
     } catch (error) {
       console.error('Error fetching posts:', error)
+    }
+  }
+
+  const handleDeleteBlog = async (postId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xoá blog này?')) {
+      return
+    }
+    try {
+      await deleteBlogPost(postId)
+      setMyPosts(prev => prev.filter(post => post.id !== postId))
+      setToast({ message: 'Đã xoá blog thành công.', type: 'success', isVisible: true })
+    } catch (error) {
+      console.error('Error deleting blog post:', error)
+      setToast({ message: 'Không thể xoá blog. Vui lòng thử lại.', type: 'error', isVisible: true })
     }
   }
 
@@ -384,10 +398,16 @@ export default function ProfilePage() {
             Thông tin cá nhân
           </button>
           <button 
-            onClick={() => setActiveTab('posts')}
-            className={`px-6 py-3 rounded-t-lg whitespace-nowrap font-medium transition-colors ${activeTab === 'posts' ? 'bg-gray-100 text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'}`}
+            onClick={() => setActiveTab('articles')}
+            className={`px-6 py-3 rounded-t-lg whitespace-nowrap font-medium transition-colors ${activeTab === 'articles' ? 'bg-gray-100 text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'}`}
           >
             Bài viết của tôi
+          </button>
+          <button 
+            onClick={() => setActiveTab('blogs')}
+            className={`px-6 py-3 rounded-t-lg whitespace-nowrap font-medium transition-colors ${activeTab === 'blogs' ? 'bg-gray-100 text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'}`}
+          >
+            Blog của tôi
           </button>
           <button 
             onClick={() => setActiveTab('events_joined')}
@@ -516,34 +536,81 @@ export default function ProfilePage() {
             </form>
           )}
 
-          {activeTab === 'posts' && (
+          {activeTab === 'articles' && (
+            <div className="flex items-center justify-center py-10">
+              <p className="text-gray-500 text-center max-w-xl">
+                Tính năng lưu trữ <span className="font-semibold">bài viết</span> đang được phát triển. 
+                Trong tương lai, các bài đăng bạn tạo ở mục <span className="font-semibold">Nội dung</span> sẽ xuất hiện tại đây.
+              </p>
+            </div>
+          )}
+
+          {activeTab === 'blogs' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {myPosts.length > 0 ? (
                 myPosts.map((post) => (
-                  <Link
+                  <div
                     key={post.id}
-                    href={`/blog/${post.id}`}
-                    className="flex flex-col gap-4 group"
+                    className="flex flex-col gap-4 group border border-gray-100 rounded-xl p-3 hover:shadow-md transition-shadow bg-white"
                   >
-                    <div className="relative h-[240px] w-full rounded-xl overflow-hidden">
+                    <Link
+                      href={`/blog/${post.id}`}
+                      className="relative h-[220px] w-full rounded-lg overflow-hidden"
+                    >
                       <Image
                         src={post.image_url || '/Image/Event.png'}
                         alt={post.title}
                         fill
                         className="object-cover group-hover:scale-105 transition duration-300"
                       />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-xl mb-2 group-hover:text-blue-600 transition">{post.title}</h3>
-                      <p className="text-gray-600 line-clamp-2">{post.excerpt || post.content}</p>
-                      <div className="mt-2 text-sm text-gray-500">
-                        {new Date(post.created_at).toLocaleDateString('vi-VN')}
+                    </Link>
+                    <div className="flex-1 flex flex-col gap-2">
+                      <h3 className="font-bold text-xl group-hover:text-blue-600 transition line-clamp-2">
+                        {post.title}
+                      </h3>
+                      <p className="text-gray-600 text-sm line-clamp-2">
+                        {post.excerpt || post.content}
+                      </p>
+                      <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+                        <span>{new Date(post.created_at).toLocaleDateString('vi-VN')}</span>
+                        <span className="capitalize">
+                          {post.status === 'approved'
+                            ? 'Đã duyệt'
+                            : post.status === 'rejected'
+                            ? 'Bị từ chối'
+                            : 'Đang chờ duyệt'}
+                        </span>
                       </div>
                     </div>
-                  </Link>
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBlog(post.id)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M6 7h12M10 11v6m4-6v6M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1zM5 7h14l-1 12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7z"
+                          />
+                        </svg>
+                        Xoá blog
+                      </button>
+                    </div>
+                  </div>
                 ))
               ) : (
-                <p className="col-span-full text-center text-gray-500 py-10">Bạn chưa có bài viết nào.</p>
+                <p className="col-span-full text-center text-gray-500 py-10">
+                  Bạn chưa có blog nào.
+                </p>
               )}
             </div>
           )}

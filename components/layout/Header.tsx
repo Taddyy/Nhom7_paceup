@@ -110,24 +110,24 @@ export default function Header({ floating = false }: HeaderProps) {
     : 'relative z-30 flex w-full justify-center px-4 pt-8 pb-2'
 
   const containerClasses = floating
-    ? 'pointer-events-auto flex items-center gap-5 w-full max-w-[720px]'
-    : 'flex items-center gap-5 w-full max-w-[720px] justify-center md:justify-start'
+    ? 'pointer-events-auto flex items-center w-full max-w-[960px]'
+    : 'flex items-center w-full max-w-[960px] justify-center md:justify-start'
 
   return (
     <header className={wrapperClasses}>
       <div className={containerClasses}>
-        <Link href="/" className="relative block h-[72px] w-[80px] shrink-0">
-          <Image
-            src={LOGO_SRC}
-            alt="PaceUp logo"
-            fill
-            className="object-contain"
-            priority
-          />
-        </Link>
+        <nav className="flex w-full items-center gap-5 rounded-[999px] border border-[rgba(190,190,190,0.12)] bg-black/80 px-6 py-3 shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+          <Link href="/" className="relative block h-11 w-11 shrink-0">
+            <Image
+              src={LOGO_SRC}
+              alt="PaceUp logo"
+              fill
+              className="object-contain"
+              priority
+            />
+          </Link>
 
-        <nav className="backdrop-blur-[5px] bg-[#f3f3f3] flex w-full max-w-[561px] items-center gap-4 rounded-[12px] px-[23px] pr-[6px] py-[6px] shadow-[0_12px_32px_rgba(0,0,0,0.08)]">
-          <div className="flex flex-1 flex-wrap items-center gap-4">
+          <div className="flex flex-1 flex-wrap items-center gap-5">
             {NAV_ITEMS.map((item) => {
               if (!isLoggedIn && item.href === '/profile') return null
               
@@ -140,7 +140,7 @@ export default function Header({ floating = false }: HeaderProps) {
                 <Link
                   key={item.href}
                   href={href}
-                  className="font-normal text-[#424242] text-base whitespace-nowrap hover:text-[#1c1c1c] transition-colors"
+                  className="font-medium text-sm text-white/80 whitespace-nowrap hover:text-white transition-colors"
                 >
                   {label}
                 </Link>
@@ -153,7 +153,7 @@ export default function Header({ floating = false }: HeaderProps) {
               <button
                 type="button"
                 onClick={handleAvatarClick}
-                className="relative h-[54px] w-[54px] rounded-full bg-white overflow-hidden shadow-[0_6px_12px_rgba(0,0,0,0.15)] flex items-center justify-center text-[#1c1c1c] text-lg font-semibold"
+                className="relative h-11 w-11 rounded-full bg-white overflow-hidden shadow-[0_6px_12px_rgba(0,0,0,0.25)] flex items-center justify-center text-[#1c1c1c] text-sm font-semibold"
                 aria-label={role === 'admin' ? 'Quản lý' : 'Trang cá nhân'}
               >
               {avatar ? (
