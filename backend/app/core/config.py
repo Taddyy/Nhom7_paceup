@@ -50,6 +50,18 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = os.getenv("SMTP_PASSWORD")
     SMTP_FROM: str | None = os.getenv("SMTP_FROM")
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str | None = os.getenv("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET: str | None = os.getenv("GOOGLE_CLIENT_SECRET")
+    GOOGLE_REDIRECT_URI: str | None = os.getenv(
+        "GOOGLE_REDIRECT_URI",
+        "https://nhom7-paceup.vercel.app/api/v1/auth/google/callback",
+    )
+    GOOGLE_REDIRECT_URI_DEV: str | None = os.getenv(
+        "GOOGLE_REDIRECT_URI_DEV",
+        "http://localhost:3000/api/v1/auth/google/callback",
+    )
+
     # Cloudflare R2
     CLOUDFLARE_R2_ACCOUNT_ID: str | None = os.getenv("CLOUDFLARE_R2_ACCOUNT_ID")
     CLOUDFLARE_R2_ACCESS_KEY_ID: str | None = os.getenv("CLOUDFLARE_R2_ACCESS_KEY_ID")

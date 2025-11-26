@@ -264,6 +264,9 @@ export default function LoginPage() {
 
               <button
                 type="button"
+                onClick={() => {
+                  window.location.href = '/api/v1/auth/google/login'
+                }}
                 className="flex h-[52px] w-full items-center justify-center gap-3 rounded-[12px] border border-black/10 bg-gradient-to-b from-white to-[#dfdfdf] text-sm font-medium uppercase text-black shadow-[inset_-3px_-3px_3px_rgba(0,0,0,0.12),inset_2px_2px_3px_rgba(0,0,0,0.1)]"
               >
                 <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none">

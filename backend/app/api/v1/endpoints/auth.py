@@ -1,23 +1,167 @@
 """
 Authentication endpoints
 """
-from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status, Header
-from sqlalchemy.orm import Session
-from sqlalchemy import text
-from app.core.database import get_db
-from app.core.security import verify_password, get_password_hash, create_access_token, decode_access_token
-from app.core.config import settings
-from app.models.user import User, RunningExperienceEnum
-from app.models.event import EventRegistration, Event
-from app.schemas.auth import LoginRequest, RegisterRequest, AuthResponse
-from app.schemas.user import UserResponse, UserStats, UserUpdate
-from app.schemas.event import EventResponse
+from datetime import datetime, timedelta
+from typing import List, Optional
 import uuid
-from datetime import datetime
-from typing import Optional, List
+import secrets
+from urllib.parse import urlencode
+
+import httpx
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.core.database import get_db
+from app.core.security import (
+    create_access_token,
+    decode_access_token,
+    get_password_hash,
+    verify_password,
+)
+from app.models.event import Event, EventRegistration
+from app.models.user import RunningExperienceEnum, User
+from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
+from app.schemas.event import EventResponse
+from app.schemas.user import UserResponse, UserStats, UserUpdate
 
 router = APIRouter()
+
+GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v3/userinfo"
+GOOGLE_OAUTH_SCOPES = "openid email profile"
+STATE_COOKIE_NAME = "google_oauth_state"
+
+
+def get_google_redirect_uri() -> str:
+    return settings.GOOGLE_REDIRECT_URI
+
+
+@router.get("/google/login", include_in_schema=False)
+async def google_login():
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Google OAuth is not configured.",
+        )
+
+    state = secrets.token_urlsafe(32)
+
+    params = {
+        "response_type": "code",
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect_uri": get_google_redirect_uri(),
+        "scope": GOOGLE_OAUTH_SCOPES,
+        "access_type": "offline",
+        "prompt": "consent",
+        "state": state,
+    }
+    url = f"{GOOGLE_AUTH_ENDPOINT}?{urlencode(params)}"
+
+    response = RedirectResponse(url=url, status_code=status.HTTP_302_FOUND)
+    response.set_cookie(
+        STATE_COOKIE_NAME,
+        state,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=600,
+    )
+    return response
+
+
+@router.get("/google/callback", include_in_schema=False)
+async def google_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    db: Session = Depends(get_db),
+):
+    if not code:
+        return RedirectResponse(
+            url="https://nhom7-paceup.vercel.app/login?error=google_no_code",
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    cookie_state = request.cookies.get(STATE_COOKIE_NAME)
+    if not state or not cookie_state or state != cookie_state:
+        return RedirectResponse(
+            url="https://nhom7-paceup.vercel.app/login?error=google_invalid_state",
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            token_resp = await client.post(
+                GOOGLE_TOKEN_ENDPOINT,
+                data={
+                    "code": code,
+                    "client_id": settings.GOOGLE_CLIENT_ID,
+                    "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                    "redirect_uri": get_google_redirect_uri(),
+                    "grant_type": "authorization_code",
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            token_resp.raise_for_status()
+            token_data = token_resp.json()
+            access_token = token_data.get("access_token")
+
+            if not access_token:
+                raise RuntimeError("No access token from Google")
+
+            userinfo_resp = await client.get(
+                GOOGLE_USERINFO_ENDPOINT,
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            userinfo_resp.raise_for_status()
+            profile = userinfo_resp.json()
+    except Exception:
+        return RedirectResponse(
+            url="https://nhom7-paceup.vercel.app/login?error=google_exchange_failed",
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    email = profile.get("email")
+    name = profile.get("name") or profile.get("given_name")
+    picture = profile.get("picture")
+
+    if not email:
+        return RedirectResponse(
+            url="https://nhom7-paceup.vercel.app/login?error=google_no_email",
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(
+            email=email,
+            full_name=name or email.split("@")[0],
+            avatar=picture,
+            is_active="true",
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    access_token = create_access_token({"sub": user.id})
+
+    response = RedirectResponse(
+        url="https://nhom7-paceup.vercel.app/", status_code=status.HTTP_302_FOUND
+    )
+    response.set_cookie(
+        "access_token",
+        access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,
+    )
+    response.delete_cookie(STATE_COOKIE_NAME)
+    return response
 
 
 @router.post("/login", response_model=AuthResponse)
