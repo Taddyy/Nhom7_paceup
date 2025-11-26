@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
+import { cloudinaryAvailable, uploadImageToCloudinary } from '@/lib/server/cloudinary'
 
-const DEFAULT_MAX_FILE_BYTES = 5 * 1024 * 1024 // 5MB safety net for avatars/thumbnails
+const DEFAULT_MAX_FILE_BYTES = 10 * 1024 * 1024 // 10MB safety net for avatars/thumbnails
 const DATA_URL_LIMIT = 5000
 const DATA_URL_PREFIX_LENGTH = 23 // "data:image/jpeg;base64,"
 const BASE64_OVERHEAD = 4 / 3
@@ -47,7 +48,19 @@ export async function POST(request: Request) {
       )
     }
 
-    // Store image as data URL (suitable for small thumbnails / cover images)
+    // Primary path: Cloudinary (tối ưu cho file lớn, nén, CDN)
+    if (cloudinaryAvailable()) {
+      try {
+        const uploadResult = await uploadImageToCloudinary(buffer, file.type)
+        console.log(`Cloudinary upload success (${uploadResult.bytes} bytes) -> ${uploadResult.publicId}`)
+        return NextResponse.json({ url: uploadResult.url, provider: 'cloudinary', success: true })
+      } catch (cloudinaryError: any) {
+        console.error('Cloudinary upload failed – falling back to base64 data URL:', cloudinaryError)
+        // fallthrough to data URL fallback
+      }
+    }
+
+    // Fallback: data URL (phù hợp cho local hoặc khi Cloudinary gặp sự cố)
     const dataUrl = buildDataUrl(buffer, file.type)
 
     if (dataUrl.length > DATA_URL_LIMIT) {
@@ -63,7 +76,7 @@ export async function POST(request: Request) {
       )
     }
 
-    console.warn('Cloudinary is not configured; using base64 data URL for image storage.')
+    console.warn('Cloudinary env missing or failed; using base64 data URL for image storage.')
     return NextResponse.json({ url: dataUrl, provider: 'data-url', success: true })
   } catch (error: any) {
     console.error('Upload error:', error)
