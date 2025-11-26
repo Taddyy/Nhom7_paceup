@@ -19,6 +19,7 @@ export interface BlogPost {
   image_url?: string
   likes_count: number
   comments_count: number
+  status?: 'pending' | 'approved' | 'rejected'
 }
 
 export interface CreateBlogPostRequest {

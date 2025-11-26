@@ -4,17 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-
-interface BlogPost {
-  id: string
-  title: string
-  content: string
-  category: string
-  author_name: string
-  created_at: string
-  status: 'pending' | 'approved' | 'rejected'
-  image_url?: string | null
-}
+import type { BlogPost } from '@/lib/api/blog-service'
 
 const stripHtml = (value: string): string => value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 
@@ -45,7 +35,7 @@ export default function BlogPostPage() {
         const { getBlogPost } = await import('@/lib/api/blog-service')
         const data = await getBlogPost(params.id)
         if (isMounted) {
-          setPost(data as BlogPost)
+          setPost(data)
         }
       } catch (err) {
         console.error('Error fetching blog detail:', err)
@@ -94,7 +84,7 @@ export default function BlogPostPage() {
     )
   }
 
-  const isPending = post.status !== 'approved'
+  const isPending = post.status === 'pending'
 
   return (
     <div className="min-h-screen bg-[#f8f9fb] pt-[140px] pb-20">
