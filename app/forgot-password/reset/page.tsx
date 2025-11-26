@@ -1,10 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { performPasswordReset } from '@/lib/api/password-reset'
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-white flex items-center justify-center pt-[120px] pb-16 px-4 text-neutral-500">
+          Đang tải trang đặt lại mật khẩu...
+        </div>
+      }
+    >
+      <ResetPasswordPageInner />
+    </Suspense>
+  )
+}
+
+function ResetPasswordPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session') ?? ''
@@ -15,9 +29,11 @@ export default function ResetPasswordPage() {
   const [info, setInfo] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  if (!sessionId && typeof window !== 'undefined') {
-    router.replace('/forgot-password')
-  }
+  useEffect(() => {
+    if (!sessionId) {
+      router.replace('/forgot-password')
+    }
+  }, [sessionId, router])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -100,5 +116,4 @@ export default function ResetPasswordPage() {
     </div>
   )
 }
-
 
