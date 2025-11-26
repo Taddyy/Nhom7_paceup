@@ -116,7 +116,7 @@ export default function Header({ floating = false }: HeaderProps) {
   return (
     <header className={wrapperClasses}>
       <div className={containerClasses}>
-        <nav className="flex w-full items-center gap-5 rounded-[999px] border border-[rgba(190,190,190,0.12)] bg-black/80 px-6 py-3 shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+        <nav className="flex w-full items-center gap-5 rounded-[999px] border border-[rgba(190,190,190,0.12)] bg-[#f3f3f3]/80 px-6 py-3 shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl">
           <Link href="/" className="relative block h-11 w-11 shrink-0">
             <Image
               src={LOGO_SRC}
