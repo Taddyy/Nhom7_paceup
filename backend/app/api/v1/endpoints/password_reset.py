@@ -64,8 +64,14 @@ def request_password_reset(
   db.add(token)
   db.commit()
 
-  # Send reset code via email; failures should surface as server errors so the UI can show a message.
-  send_reset_code_email(user.email, code, minutes_valid=DEFAULT_RESET_TOKEN_MINUTES)
+  # Send reset code via email; if email fails we still don't reveal whether the
+  # account exists, but we log the error server-side.
+  try:
+    send_reset_code_email(user.email, code, minutes_valid=DEFAULT_RESET_TOKEN_MINUTES)
+  except Exception:
+    # Do not raise to the client; just behave as if email was sent.
+    # In production you may want to add logging here.
+    pass
 
   return {"message": "If this email exists, a reset code has been sent."}
 

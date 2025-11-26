@@ -43,6 +43,13 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str | None = os.getenv("CLOUDINARY_API_KEY")
     CLOUDINARY_API_SECRET: str | None = os.getenv("CLOUDINARY_API_SECRET")
 
+    # SMTP / email (password reset, notifications)
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER: str | None = os.getenv("SMTP_USER")
+    SMTP_PASSWORD: str | None = os.getenv("SMTP_PASSWORD")
+    SMTP_FROM: str | None = os.getenv("SMTP_FROM")
+
     # Cloudflare R2
     CLOUDFLARE_R2_ACCOUNT_ID: str | None = os.getenv("CLOUDFLARE_R2_ACCOUNT_ID")
     CLOUDFLARE_R2_ACCESS_KEY_ID: str | None = os.getenv("CLOUDFLARE_R2_ACCESS_KEY_ID")
