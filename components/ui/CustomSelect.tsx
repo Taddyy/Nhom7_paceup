@@ -30,7 +30,7 @@ export default function CustomSelect({
   className = '',
   width = 'auto',
   error = false,
-  variant = 'default'
+  variant = 'default',
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const selectRef = useRef<HTMLDivElement>(null)
@@ -51,13 +51,21 @@ export default function CustomSelect({
   const displayValue = selectedOption?.label || placeholder
 
   const isHeroVariant = variant === 'hero'
+  const defaultStateClass = (() => {
+    if (error) {
+      return 'border-red-500 ring-2 ring-red-100'
+    }
+    if (isOpen) {
+      return 'border-black ring-2 ring-black/10'
+    }
+    return 'border-black/15 hover:border-black/40'
+  })()
+
   const buttonClasses = isHeroVariant
     ? `bg-[#f3f3f3] border border-[rgba(182,182,182,0.1)] rounded-[12px] px-3 h-[50px] flex items-center gap-2 ${
         width === 'auto' ? 'w-full' : ''
       } hover:bg-neutral-100 transition-colors`
-    : `w-full rounded-[12px] border px-4 text-base text-neutral-900 focus:outline-none transition bg-white flex items-center gap-2 ${
-        error ? 'border-red-500 focus:border-red-500' : 'border-neutral-200 focus:border-neutral-900'
-      } hover:bg-neutral-50 h-[56px]`
+    : `w-full h-[60px] rounded-[14px] bg-white px-5 text-base text-[#1c1c1c] flex items-center gap-2 shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-black/10 focus-visible:border-black ${defaultStateClass}`
 
   return (
     <div className={`relative ${className}`} ref={selectRef} style={width !== 'auto' && !isHeroVariant ? { width } : undefined}>
@@ -66,6 +74,8 @@ export default function CustomSelect({
         onClick={() => setIsOpen(!isOpen)}
         className={buttonClasses}
         style={isHeroVariant && width !== 'auto' ? { width } : undefined}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
       >
         {icon && <Image src={icon} alt="" width={14} height={14} className="flex-shrink-0" />}
         <span className={`flex-1 text-left ${isHeroVariant ? 'text-[17px] text-[#252525]' : 'text-base text-neutral-900'}`}>{displayValue}</span>
@@ -81,7 +91,7 @@ export default function CustomSelect({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 w-full bg-white rounded-xl border border-neutral-200 shadow-lg z-50 overflow-hidden max-h-[300px] overflow-y-auto">
+        <div className="absolute top-full mt-2 w-full rounded-[16px] border border-neutral-200 bg-white shadow-2xl z-50 overflow-hidden max-h-[300px] overflow-y-auto">
           {options
             .filter((option) => !(option.value === '' && value !== '')) // Hide placeholder if value is selected
             .map((option, index) => (
@@ -95,11 +105,9 @@ export default function CustomSelect({
                   }
                 }}
                 disabled={option.unavailable}
-                className={`w-full px-4 py-3 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors ${
-                  index > 0 ? 'border-t border-neutral-200' : ''
-                } ${
-                  option.value === value ? 'bg-neutral-50 font-medium' : ''
-                } ${
+                className={`w-full px-4 py-3 text-left text-sm text-neutral-700 transition-colors ${
+                  index > 0 ? 'border-t border-neutral-100' : ''
+                } ${option.value === value ? 'bg-neutral-50 font-medium text-neutral-900' : 'hover:bg-neutral-50'} ${
                   option.unavailable ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
                 }`}
               >

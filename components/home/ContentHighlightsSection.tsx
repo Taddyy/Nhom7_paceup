@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createBlogPost } from '@/lib/api/blog-service'
 import RichTextEditor from '@/components/ui/RichTextEditor'
 import DropdownMenu, { type DropdownOption } from '@/components/ui/DropdownMenu'
+import CustomSelect, { type SelectOption } from '@/components/ui/CustomSelect'
 
 export interface ContentHighlight {
   id: string
@@ -69,6 +70,14 @@ const GIPHY_SEARCH_URL_BASE = `https://api.giphy.com/v1/gifs/search?api_key=${GI
 const TENOR_API_KEY = process.env.NEXT_PUBLIC_TENOR_API_KEY ?? 'LIVDSRZULELA'
 const TENOR_TRENDING_URL = `https://g.tenor.com/v1/trending?key=${TENOR_API_KEY}&limit=12&media_filter=minimal`
 const TENOR_SEARCH_URL_BASE = `https://g.tenor.com/v1/search?key=${TENOR_API_KEY}&limit=12&media_filter=minimal&q=`
+
+const BLOG_CATEGORY_OPTIONS: SelectOption[] = [
+  { label: 'Chung', value: 'general' },
+  { label: 'Tập luyện', value: 'training' },
+  { label: 'Dinh dưỡng', value: 'nutrition' },
+  { label: 'Trang thiết bị', value: 'gear' },
+  { label: 'Sự kiện', value: 'events' }
+]
 
 const fetchGiphyGifs = async (url: string): Promise<GifResult[]> => {
   const response = await fetch(url, { cache: 'no-store' })
@@ -1537,6 +1546,7 @@ function BlogComposer({ onPostCreated }: { onPostCreated?: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const [isTitleFocused, setIsTitleFocused] = useState(false)
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return
@@ -1676,24 +1686,30 @@ function BlogComposer({ onPostCreated }: { onPostCreated?: () => void }) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Tiêu đề bài viết..."
-            className="w-full px-4 py-3 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#1c1c1c] focus:border-transparent outline-none transition text-lg font-medium"
+            className={`w-full px-4 py-3 rounded-xl border outline-none transition text-lg font-medium ${
+              isTitleFocused
+                ? 'border-[#1c1c1c] ring-2 ring-[#1c1c1c]/10 text-[#000]'
+                : title
+                ? 'border-black/10 text-[#6b6b6b]'
+                : 'border-black/10 text-[#1c1c1c]/60'
+            }`}
+            onFocus={() => setIsTitleFocused(true)}
+            onBlur={() => setIsTitleFocused(false)}
             required
           />
         </div>
 
         {/* Category */}
         <div>
-          <select
+          <CustomSelect
+            options={BLOG_CATEGORY_OPTIONS}
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-[#1c1c1c] focus:border-transparent outline-none transition text-sm"
-          >
-            <option value="general">Chung</option>
-            <option value="training">Tập luyện</option>
-            <option value="nutrition">Dinh dưỡng</option>
-            <option value="gear">Trang thiết bị</option>
-            <option value="events">Sự kiện</option>
-          </select>
+            onChange={setCategory}
+            placeholder="Chọn danh mục"
+            className="w-full"
+            width="100%"
+            variant="hero"
+          />
         </div>
 
         {/* Image Upload */}
