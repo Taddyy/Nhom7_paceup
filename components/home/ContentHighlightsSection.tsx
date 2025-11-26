@@ -276,36 +276,39 @@ export default function ContentHighlightsSection({
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
                 {filteredPosts.map((post) => (
-                  <article key={post.id} className="flex flex-col gap-8">
-                    <div className="h-[320px] relative rounded-[24px] overflow-hidden">
-                      <Image
-                        src={post.image}
-                        alt={post.title}
-                        fill
-                        sizes="(max-width: 1024px) 100vw, 570px"
-                        className="object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/80" />
-                      <div className="absolute bottom-0 left-0 right-0 p-6 flex items-center justify-between text-white text-base">
-                        <p>{post.author}</p>
-                        <p>{post.date}</p>
+                  <article key={post.id} className="flex flex-col gap-4">
+                    <Link href={`/blog/${post.id}`} className="group block">
+                      <div className="h-[320px] relative rounded-[24px] overflow-hidden">
+                        <Image
+                          src={post.image}
+                          alt={post.title}
+                          fill
+                          sizes="(max-width: 1024px) 100vw, 570px"
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/80" />
+                        <div className="absolute bottom-0 left-0 right-0 p-6 flex items-center justify-between text-white text-base">
+                          <p>{post.author}</p>
+                          <p>{post.date}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex flex-col gap-6">
-                      <div className="flex flex-col gap-3">
-                        <h3 className="font-bold text-[24px] leading-[32px] text-black">
+                    </Link>
+
+                    <div className="flex flex-1 flex-col justify-between gap-4">
+                      <div className="flex flex-col gap-2">
+                        <h3 className="font-bold text-[24px] leading-[32px] text-black line-clamp-2">
                           {post.title}
                         </h3>
                         <p
-                          className="font-medium text-[24px] leading-[32px] text-black/70 h-[94px] overflow-hidden"
-                          style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}
+                          className="text-[18px] leading-[26px] text-black/70 overflow-hidden"
+                          style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
                         >
                           {post.summary}
                         </p>
                       </div>
                       <Link
                         href={`/blog/${post.id}`}
-                        className="bg-[#1c1c1c] inline-flex items-center justify-center px-4 py-2 rounded-lg text-white uppercase text-sm tracking-wide shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.4),inset_4px_4px_6px_rgba(255,255,255,0.15)] self-start"
+                        className="mt-2 bg-[#1c1c1c] inline-flex items-center justify-center px-4 py-2 rounded-lg text-white uppercase text-sm tracking-wide shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.4),inset_4px_4px_6px_rgba(255,255,255,0.15)] self-start"
                       >
                         Đọc ngay
                       </Link>

@@ -76,8 +76,8 @@ export default function BlogPostPage() {
         <div className="mx-auto w-full max-w-[1200px] px-4 text-center">
           <h1 className="text-3xl font-semibold text-neutral-900 mb-4">Oops...</h1>
           <p className="text-neutral-600 mb-6">{error ?? 'Bài viết này không tồn tại hoặc đã bị xoá.'}</p>
-          <Link href="/blog" className="inline-flex items-center gap-2 rounded-full border border-black/10 px-6 py-3 text-sm font-semibold text-[#1c1c1c] hover:border-black hover:bg-black/5 transition">
-            ← Quay lại Blog
+          <Link href="/content" className="inline-flex items-center gap-2 rounded-full border border-black/10 px-6 py-3 text-sm font-semibold text-[#1c1c1c] hover:border-black hover:bg-black/5 transition">
+            ← Quay lại nội dung
           </Link>
         </div>
       </div>
@@ -90,8 +90,8 @@ export default function BlogPostPage() {
     <div className="min-h-screen bg-[#f8f9fb] pt-[140px] pb-20">
       <div className="mx-auto w-full max-w-[1200px] px-4">
         <div className="mb-8 flex items-center gap-3 text-sm text-neutral-500">
-          <Link href="/blog" className="inline-flex items-center gap-2 rounded-full border border-black/10 px-6 py-2 text-sm font-semibold text-[#1c1c1c] hover:border-black hover:bg-black/5 transition">
-            ← Danh sách blog
+          <Link href="/content" className="inline-flex items-center gap-2 rounded-full border border-black/10 px-6 py-2 text-sm font-semibold text-[#1c1c1c] hover:border-black hover:bg-black/5 transition">
+            ← Danh sách nội dung
           </Link>
           {isPending && (
             <span className="rounded-full bg-amber-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
