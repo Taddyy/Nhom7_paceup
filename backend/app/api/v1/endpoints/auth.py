@@ -137,8 +137,12 @@ async def google_callback(
 
     user = db.query(User).filter(User.email == email).first()
     if not user:
+        # Generate a random password for OAuth users (they won't use it, but DB requires it)
+        random_password = secrets.token_urlsafe(32)
         user = User(
+            id=str(uuid.uuid4()),
             email=email,
+            hashed_password=get_password_hash(random_password),
             full_name=name or email.split("@")[0],
             avatar=picture,
             is_active="true",
