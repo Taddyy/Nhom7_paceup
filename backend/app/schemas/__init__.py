@@ -4,6 +4,12 @@ from app.schemas.auth import Token, LoginRequest, RegisterRequest
 from app.schemas.blog import BlogPost, BlogPostCreate, BlogPostUpdate, BlogPostResponse
 from app.schemas.event import Event, EventCreate, EventUpdate, EventResponse, EventRegistrationRequest
 from app.schemas.report import ReportCreate, ReportResponse, ReportUpdate
+from app.schemas.email_subscription import (
+    EmailSubscriptionBase,
+    EmailSubscriptionCreate,
+    EmailSubscriptionRead,
+    EmailSubscriptionList,
+)
 
 __all__ = [
     "User", "UserCreate", "UserResponse",
@@ -11,5 +17,6 @@ __all__ = [
     "BlogPost", "BlogPostCreate", "BlogPostUpdate", "BlogPostResponse",
     "Event", "EventCreate", "EventUpdate", "EventResponse", "EventRegistrationRequest",
     "ReportCreate", "ReportResponse", "ReportUpdate",
+    "EmailSubscriptionBase", "EmailSubscriptionCreate", "EmailSubscriptionRead", "EmailSubscriptionList",
 ]
 

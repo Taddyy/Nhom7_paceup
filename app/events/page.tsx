@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import EventCard from '@/components/events/EventCard'
@@ -54,6 +55,7 @@ const QUICK_TAGS: Array<
 ]
 
 export default function EventsPage() {
+  const searchParams = useSearchParams()
   const [events, setEvents] = useState<EventItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -62,6 +64,7 @@ export default function EventsPage() {
   const [selectedDistance, setSelectedDistance] = useState(DISTANCE_OPTIONS[0])
   const [keyword, setKeyword] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [selectedWard, setSelectedWard] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -104,6 +107,29 @@ export default function EventsPage() {
     fetchEvents()
   }, [page])
 
+  // Initialize filters from query params (used when navigating from home hero section)
+  useEffect(() => {
+    const cityParam = searchParams.get('city')
+    const wardParam = searchParams.get('ward')
+
+    if (cityParam) {
+      const cityMap: Record<string, string> = {
+        'Thành phố HCM': 'TP. Hồ Chí Minh',
+        'Hà Nội': 'Hà Nội',
+        'Đà Nẵng': 'Đà Nẵng',
+        'Cần Thơ': 'Cần Thơ',
+      }
+      const mappedCity = cityMap[cityParam] ?? cityParam
+      if (CITY_OPTIONS.includes(mappedCity)) {
+        setSelectedCity(mappedCity)
+      }
+    }
+
+    if (wardParam) {
+      setSelectedWard(wardParam)
+    }
+  }, [searchParams])
+
   const normalizeText = (value: string) =>
     value
       .normalize('NFD')
@@ -133,11 +159,17 @@ export default function EventsPage() {
     return events.filter((event) => {
       const matchCity =
         selectedCity === 'Tất cả' || matchesCity(event.location, selectedCity)
-      const matchDistance = selectedDistance === 'Tất cả' || event.distance === selectedDistance
-      const matchKeyword = keyword.length === 0 || event.title.toLowerCase().includes(keyword.toLowerCase())
-      return matchCity && matchDistance && matchKeyword
+      const matchDistance =
+        selectedDistance === 'Tất cả' || event.distance === selectedDistance
+      const matchKeyword =
+        keyword.length === 0 || event.title.toLowerCase().includes(keyword.toLowerCase())
+      const matchWard =
+        !selectedWard ||
+        normalizeText(event.location).includes(normalizeText(selectedWard))
+
+      return matchCity && matchDistance && matchKeyword && matchWard
     })
-  }, [events, selectedCity, selectedDistance, keyword])
+  }, [events, selectedCity, selectedDistance, keyword, selectedWard])
 
   return (
     <div className="flex flex-col items-center bg-white">

@@ -112,8 +112,17 @@ export default function BlogPostPage() {
             <h1 className="mt-6 text-3xl font-bold text-[#1c1c1c] md:text-[44px] md:leading-tight">{post.title}</h1>
             <div className="mt-6 flex flex-wrap items-center gap-6 text-sm text-neutral-500">
               <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-full bg-black text-white flex items-center justify-center font-semibold uppercase">
-                  {post.author_name?.slice(0, 2) ?? 'PU'}
+                <div className="relative h-11 w-11 rounded-full bg-black text-white flex items-center justify-center font-semibold uppercase overflow-hidden">
+                  {post.author_avatar ? (
+                    <Image
+                      src={post.author_avatar}
+                      alt={post.author_name ?? 'Tác giả'}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    post.author_name?.slice(0, 2) ?? 'PU'
+                  )}
                 </div>
                 <div>
                   <p className="font-semibold text-[#1c1c1c]">{post.author_name ?? 'PaceUp Studio'}</p>
@@ -156,8 +165,8 @@ export default function BlogPostPage() {
           <footer className="rounded-[32px] border border-dashed border-black/10 bg-white/60 px-6 py-8 text-sm text-neutral-500 md:px-10">
             <p>
               Chia sẻ cảm nhận hoặc góp ý cho đội ngũ PaceUp bằng cách gửi email về{' '}
-              <a href="mailto:hello@paceup.vn" className="text-[#1c1c1c] underline decoration-dotted">
-                hello@paceup.vn
+              <a href="mailto:noreply.paceup@gmail.com" className="text-[#1c1c1c] underline decoration-dotted">
+                noreply.paceup@gmail.com
               </a>
               . Đội ngũ kiểm duyệt sẽ phản hồi trong vòng 24 giờ làm việc.
             </p>

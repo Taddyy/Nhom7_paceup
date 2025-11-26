@@ -13,6 +13,7 @@ export interface BlogPost {
   excerpt?: string
   author_id: string
   author_name: string
+  author_avatar?: string
   category: string
   created_at: string
   updated_at: string

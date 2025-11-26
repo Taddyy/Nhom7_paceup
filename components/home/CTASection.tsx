@@ -1,6 +1,9 @@
 'use client'
 
+import { FormEvent, useState } from 'react'
 import Image from 'next/image'
+import { createEmailSubscription } from '@/lib/api/email-subscriptions'
+import Toast from '@/components/ui/Toast'
 
 const CTA_STATS = [
   {
@@ -43,8 +46,47 @@ const CTA_SOCIALS = [
  * CTA (Call To Action) section styled after the glassmorphism block in the design.
  */
 export default function CTASection() {
+  const [email, setEmail] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [toast, setToast] = useState<{
+    message: string
+    type: 'success' | 'error' | 'info'
+    isVisible: boolean
+  }>({ message: '', type: 'success', isVisible: false })
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!email || isSubmitting) return
+
+    try {
+      setIsSubmitting(true)
+      await createEmailSubscription(email, 'cta_home')
+      setToast({
+        message: 'Cảm ơn bạn đã đăng ký nhận thông tin!',
+        type: 'success',
+        isVisible: true,
+      })
+      setEmail('')
+    } catch (error) {
+      console.error('Failed to subscribe email:', error)
+      setToast({
+        message: 'Không thể đăng ký email, vui lòng thử lại sau.',
+        type: 'error',
+        isVisible: true,
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <section className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#050816] px-4 text-white md:px-8">
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
+      />
       <div className="absolute inset-0">
         <Image src="/Image/BG CTA.png" alt="CTA background" fill className="object-cover opacity-70" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#050816]/30 via-[#050816]/80 to-[#050816]" />
@@ -90,7 +132,7 @@ export default function CTASection() {
 
             <form
               className="flex w-full max-w-[714px] flex-col gap-4 md:flex-row"
-              onSubmit={(event) => event.preventDefault()}
+              onSubmit={handleSubmit}
             >
               <label htmlFor="cta-email" className="sr-only">
                 Email của bạn
@@ -102,12 +144,16 @@ export default function CTASection() {
                   placeholder="Email của bạn"
                   className="flex-1 bg-transparent px-6 text-2xl text-white placeholder-white/55 focus:outline-none"
                   required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  disabled={isSubmitting}
                 />
                 <button
                   type="submit"
-                  className="w-full bg-[#3d27ff] px-8 text-2xl font-semibold tracking-[-0.48px] text-white shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.4),inset_4px_4px_6px_rgba(255,255,255,0.15)] md:w-[255px]"
+                  className="w-full bg-[#3d27ff] px-8 text-2xl font-semibold tracking-[-0.48px] text-white shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.4),inset_4px_4px_6px_rgba(255,255,255,0.15)] md:w-[255px] disabled:opacity-70"
+                  disabled={isSubmitting}
                 >
-                  Đăng kí ngay
+                  {isSubmitting ? 'Đang gửi...' : 'Đăng kí ngay'}
                 </button>
               </div>
             </form>

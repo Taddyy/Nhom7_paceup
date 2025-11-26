@@ -4,7 +4,7 @@ API v1 router
 import re
 from fastapi import APIRouter
 from sqlalchemy import text
-from app.api.v1.endpoints import auth, blog, events, documents, admin, reports, notifications
+from app.api.v1.endpoints import auth, blog, events, documents, admin, reports, notifications, email_subscriptions
 from app.core.database import SessionLocal
 from app.core.config import settings
 
@@ -17,6 +17,7 @@ api_router.include_router(documents.router, prefix="/documents", tags=["document
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+api_router.include_router(email_subscriptions.router, prefix="/email", tags=["email-subscriptions"])
 
 
 def extract_db_name_from_url(database_url: str) -> str:

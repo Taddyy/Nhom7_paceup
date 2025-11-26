@@ -1,4 +1,6 @@
-import { Suspense } from 'react'
+'use client'
+
+import { Suspense, useEffect, useState } from 'react'
 
 import HeroSection from '@/components/home/HeroSection'
 import RegisteredEventsSection from '@/components/home/RegisteredEventsSection'
@@ -9,6 +11,7 @@ import ContentHighlightsSection, {
 } from '@/components/home/ContentHighlightsSection'
 import CTASection from '@/components/home/CTASection'
 import type { EventCardProps } from '@/components/events/EventCard'
+import { getBlogPosts, type BlogPost } from '@/lib/api/blog-service'
 
 const registeredEvents: EventCardProps[] = [
   {
@@ -224,8 +227,26 @@ const generateUpcomingEvents = (count: number): EventCardProps[] => {
 
 const upcomingEvents = generateUpcomingEvents(12)
 
-const contentHighlights = generateContentHighlights(4)
-const articleHighlights = generateArticleHighlights(4)
+const staticContentHighlights = generateContentHighlights(4)
+const staticArticleHighlights = generateArticleHighlights(4)
+
+const mapBlogPostToHighlight = (post: BlogPost): ContentHighlight => {
+  const plain = (post.excerpt || post.content || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const summary =
+    plain.length > 200 ? `${plain.slice(0, 200)}…` : plain || 'Bài viết đang chờ cập nhật nội dung.'
+
+  return {
+    id: post.id,
+    title: post.title,
+    author: post.author_name || 'PaceUp Studio',
+    date: new Date(post.created_at).toLocaleDateString('vi-VN'),
+    summary,
+    image: post.image_url || '/Image/Event.png'
+  }
+}
 
 import HomeToast from '@/components/home/HomeToast'
 
@@ -233,6 +254,29 @@ import HomeToast from '@/components/home/HomeToast'
  * Home page component matching Figma design.
  */
 export default function HomePage() {
+  const [posts, setPosts] = useState<ContentHighlight[]>(staticContentHighlights)
+  const [articles] = useState<ArticleHighlight[]>(staticArticleHighlights)
+  const [isFetchingPosts, setIsFetchingPosts] = useState<boolean>(true)
+
+  useEffect(() => {
+    const fetchApprovedBlogs = async () => {
+      try {
+        setIsFetchingPosts(true)
+        const response = await getBlogPosts(1, 4, undefined, 'approved')
+        if (response.posts.length > 0) {
+          setPosts(response.posts.map(mapBlogPostToHighlight))
+        }
+      } catch (error) {
+        console.error('Failed to load blog posts for home:', error)
+        setPosts(staticContentHighlights)
+      } finally {
+        setIsFetchingPosts(false)
+      }
+    }
+
+    fetchApprovedBlogs()
+  }, [])
+
   return (
     <div className="bg-white flex flex-col items-center relative min-h-screen w-full">
       <Suspense fallback={null}>
@@ -243,7 +287,11 @@ export default function HomePage() {
       </div>
       <RegisteredEventsSection events={registeredEvents} />
       <UpcomingEventsSection events={upcomingEvents} />
-      <ContentHighlightsSection posts={contentHighlights} articles={articleHighlights} />
+      <ContentHighlightsSection
+        posts={posts}
+        articles={articles}
+        isLoadingBlogs={isFetchingPosts}
+      />
       <CTASection />
     </div>
   )

@@ -7,16 +7,18 @@ import { getCurrentUser, logout } from '@/lib/api/auth-service'
 import type { BlogPost } from '@/lib/api/blog-service'
 import type { Event } from '@/lib/api/events'
 import type { Report } from '@/lib/api/reports'
+import { deleteEmailSubscription, getEmailSubscriptions, type EmailSubscription } from '@/lib/api/email-subscriptions'
 import Toast from '@/components/ui/Toast'
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'overview' | 'posts' | 'events' | 'reports' | 'registrations'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'posts' | 'events' | 'reports' | 'registrations' | 'emails'>('overview')
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [events, setEvents] = useState<Event[]>([])
   const [reports, setReports] = useState<Report[]>([])
   const [registrations, setRegistrations] = useState<EventRegistration[]>([])
+  const [emailSubscriptions, setEmailSubscriptions] = useState<EmailSubscription[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean }>({ message: '', type: 'success', isVisible: false })
   
@@ -45,6 +47,7 @@ export default function AdminDashboard() {
     if (activeTab === 'events') fetchEvents()
     if (activeTab === 'reports') fetchReports()
     if (activeTab === 'registrations') fetchRegistrations()
+    if (activeTab === 'emails') fetchEmailSubscriptions()
   }, [activeTab])
 
   const checkAdminAccess = async () => {
@@ -213,6 +216,20 @@ export default function AdminDashboard() {
         message: 'Lỗi khi tải danh sách đăng ký.', 
         type: 'error', 
         isVisible: true 
+      })
+    }
+  }
+
+  const fetchEmailSubscriptions = async () => {
+    try {
+      const data = await getEmailSubscriptions()
+      setEmailSubscriptions(data.items)
+    } catch (error: any) {
+      console.error('Failed to fetch email subscriptions:', error)
+      setToast({
+        message: 'Lỗi khi tải danh sách email đăng ký.',
+        type: 'error',
+        isVisible: true,
       })
     }
   }
@@ -401,6 +418,12 @@ export default function AdminDashboard() {
                 className={`px-6 py-4 font-medium transition-colors ${activeTab === 'registrations' ? 'text-black border-b-2 border-black bg-gray-50' : 'text-gray-500 hover:bg-gray-50'}`}
               >
                 Đăng ký sự kiện <span className="ml-2 bg-red-100 text-red-600 text-xs py-0.5 px-2 rounded-full">{stats?.pending_registrations || 0}</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('emails')}
+                className={`px-6 py-4 font-medium transition-colors ${activeTab === 'emails' ? 'text-black border-b-2 border-black bg-gray-50' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Email đăng ký
               </button>
             </div>
             <button
@@ -679,6 +702,70 @@ export default function AdminDashboard() {
                     ) : (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-gray-500">Không có đăng ký nào chờ duyệt.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Email Subscriptions Tab */}
+            {activeTab === 'emails' && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-gray-500 text-sm">
+                      <th className="py-3 px-4">Email</th>
+                      <th className="py-3 px-4">Nguồn</th>
+                      <th className="py-3 px-4">Ngày đăng ký</th>
+                      <th className="py-3 px-4 text-right">Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {emailSubscriptions.length > 0 ? (
+                      emailSubscriptions.map((sub) => (
+                        <tr key={sub.id} className="hover:bg-gray-50 transition">
+                          <td className="py-3 px-4 font-medium text-gray-900">{sub.email}</td>
+                          <td className="py-3 px-4 text-gray-600">
+                            {sub.source === 'cta_home' ? 'CTA Trang chủ' : sub.source || 'Không rõ'}
+                          </td>
+                          <td className="py-3 px-4 text-gray-500 text-sm">
+                            {new Date(sub.created_at).toLocaleString('vi-VN')}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!confirm('Xóa email này khỏi danh sách?')) return
+                                try {
+                                  await deleteEmailSubscription(sub.id)
+                                  setEmailSubscriptions((prev) => prev.filter((item) => item.id !== sub.id))
+                                  setToast({
+                                    message: 'Đã xóa email đăng ký.',
+                                    type: 'success',
+                                    isVisible: true,
+                                  })
+                                } catch (error) {
+                                  console.error('Failed to delete email subscription:', error)
+                                  setToast({
+                                    message: 'Không thể xóa email, vui lòng thử lại.',
+                                    type: 'error',
+                                    isVisible: true,
+                                  })
+                                }
+                              }}
+                              className="bg-red-100 text-red-700 hover:bg-red-200 text-sm font-medium px-3 py-1 rounded"
+                            >
+                              Xóa
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-gray-500">
+                          Chưa có email đăng ký nào.
+                        </td>
                       </tr>
                     )}
                   </tbody>

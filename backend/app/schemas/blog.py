@@ -32,6 +32,7 @@ class BlogPostResponse(BlogPostBase):
     id: str
     author_id: str
     author_name: str
+    author_avatar: Optional[str] = None
     excerpt: Optional[str] = None
     status: str
     likes_count: int = 0
