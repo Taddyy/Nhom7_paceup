@@ -5,7 +5,32 @@ import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import TextAlign from '@tiptap/extension-text-align'
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
+
+const buildDocumentsAnalyzeUrl = (): string => {
+  const envBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')
+
+  if (!envBase) {
+    return '/api/v1/documents/analyze'
+  }
+
+  if (envBase.endsWith('/api/v1')) {
+    return `${envBase}/documents/analyze`
+  }
+
+  if (envBase.endsWith('/api')) {
+    return `${envBase}/v1/documents/analyze`
+  }
+
+  return `${envBase}/api/v1/documents/analyze`
+}
+
+const buildDocumentAnalyzeFallbacks = (): string[] => {
+  const primary = buildDocumentsAnalyzeUrl()
+  const fallbacks = ['/api/v1/documents/analyze', 'http://localhost:8000/api/v1/documents/analyze']
+
+  return [primary, ...fallbacks.filter((url) => url !== primary)]
+}
 
 interface RichTextEditorProps {
   content: string
@@ -14,7 +39,28 @@ interface RichTextEditorProps {
   placeholder?: string
 }
 
-const MenuBar = ({ editor, onSEOContent }: { editor: any, onSEOContent?: (content: string) => void }) => {
+type UploadStatus = 'idle' | 'uploading' | 'analyzing' | 'success' | 'error'
+
+interface DocumentUploadState {
+  status: UploadStatus
+  message?: string
+}
+
+type DocumentUploadStateSetter = (
+  value: DocumentUploadState | ((prev: DocumentUploadState) => DocumentUploadState)
+) => void
+
+const MenuBar = ({
+  editor,
+  onSEOContent,
+  documentUploadState,
+  setDocumentUploadState,
+}: {
+  editor: any
+  onSEOContent?: (content: string) => void
+  documentUploadState: DocumentUploadState
+  setDocumentUploadState: DocumentUploadStateSetter
+}) => {
   if (!editor) {
     return null
   }
@@ -52,6 +98,12 @@ const MenuBar = ({ editor, onSEOContent }: { editor: any, onSEOContent?: (conten
      input.click();
   }
 
+  const clearStatusSoon = () => {
+    window.setTimeout(() => {
+      setDocumentUploadState({ status: 'idle' })
+    }, 2500)
+  }
+
   const handleDocumentUpload = () => {
     const input = document.createElement('input')
     input.type = 'file'
@@ -63,10 +115,42 @@ const MenuBar = ({ editor, onSEOContent }: { editor: any, onSEOContent?: (conten
         formData.append('file', file)
 
         try {
-          // Use absolute URL for Python backend
-          const response = await fetch('http://localhost:8000/api/v1/documents/analyze', {
-            method: 'POST',
-            body: formData,
+          setDocumentUploadState({
+            status: 'uploading',
+            message: 'Đang tải tệp lên máy chủ...',
+          })
+          const endpoints = buildDocumentAnalyzeFallbacks()
+          let response: Response | null = null
+          let lastError: unknown = null
+
+          for (const [index, endpoint] of endpoints.entries()) {
+            setDocumentUploadState({
+              status: 'uploading',
+              message: `Đang tải lên... (thử ${index + 1}/${endpoints.length})`,
+            })
+            try {
+              response = await fetch(endpoint, {
+                method: 'POST',
+                body: formData,
+              })
+
+              if (response.ok) {
+                break
+              }
+
+              lastError = new Error(`Document analyzer returned ${response.status} for ${endpoint}`)
+            } catch (error) {
+              lastError = error
+            }
+          }
+
+          if (!response || !response.ok) {
+            throw lastError ?? new Error('Không thể kết nối đến máy chủ phân tích tài liệu.')
+          }
+
+          setDocumentUploadState({
+            status: 'analyzing',
+            message: 'Đang phân tích và trích xuất nội dung...',
           })
 
           if (response.ok) {
@@ -83,14 +167,29 @@ const MenuBar = ({ editor, onSEOContent }: { editor: any, onSEOContent?: (conten
                 alert('Đã tải tài liệu thành công! Nội dung văn bản đã được trích xuất để tối ưu SEO.')
             }
             
+            setDocumentUploadState({
+              status: 'success',
+              message: 'Hoàn tất! Nội dung đã được chèn vào bài viết.',
+            })
+            clearStatusSoon()
           } else {
             const errorText = await response.text();
             console.error('Upload failed:', response.status, errorText);
             alert(`Không thể phân tích tài liệu. Lỗi: ${response.status} - ${response.statusText}`);
+            setDocumentUploadState({
+              status: 'error',
+              message: 'Tải tệp thất bại. Vui lòng thử lại.',
+            })
+            clearStatusSoon()
           }
         } catch (error) {
           console.error('Error uploading document:', error)
           alert('Lỗi kết nối đến server. Hãy chắc chắn Backend đang chạy.')
+          setDocumentUploadState({
+            status: 'error',
+            message: 'Không thể kết nối tới máy chủ phân tích.',
+          })
+          clearStatusSoon()
         }
       }
     }
@@ -184,18 +283,47 @@ const MenuBar = ({ editor, onSEOContent }: { editor: any, onSEOContent?: (conten
       </button>
       <button 
         onClick={handleDocumentUpload}
-        className="p-2 rounded-lg transition-all text-gray-400 hover:bg-gray-50"
+        className={`p-2 rounded-lg transition-all ${['uploading', 'analyzing'].includes(documentUploadState.status) ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-50'}`}
         title="Tải lên PDF/Docx"
         type="button"
+        disabled={['uploading', 'analyzing'].includes(documentUploadState.status)}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       </button>
+      {documentUploadState.status !== 'idle' && (
+        <div
+          className={`flex items-center gap-2 rounded-lg px-3 py-1 text-sm ${
+            documentUploadState.status === 'success'
+              ? 'bg-emerald-50 text-emerald-700'
+              : documentUploadState.status === 'error'
+              ? 'bg-rose-50 text-rose-700'
+              : 'bg-blue-50 text-blue-700'
+          }`}
+          aria-live="polite"
+        >
+          {documentUploadState.status === 'success' ? (
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          ) : documentUploadState.status === 'error' ? (
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          ) : (
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          )}
+          <span>{documentUploadState.message}</span>
+        </div>
+      )}
     </div>
   )
 }
 
 export default function RichTextEditor({ content, onChange, onSEOContent, placeholder }: RichTextEditorProps) {
   const [_, forceUpdate] = useState(0)
+  const [documentUploadState, setDocumentUploadState] = useState<DocumentUploadState>({ status: 'idle' })
   
   const editor = useEditor({
     extensions: [
@@ -225,7 +353,12 @@ export default function RichTextEditor({ content, onChange, onSEOContent, placeh
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-black focus-within:border-transparent transition">
-      <MenuBar editor={editor} onSEOContent={onSEOContent} />
+      <MenuBar
+        editor={editor}
+        onSEOContent={onSEOContent}
+        documentUploadState={documentUploadState}
+        setDocumentUploadState={setDocumentUploadState}
+      />
       <EditorContent editor={editor} />
     </div>
   )

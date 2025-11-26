@@ -12,17 +12,21 @@ const nextConfig = {
   // Ensure standalone output is NOT used for Vercel (it handles it automatically)
   // output: 'standalone', 
   rewrites: async () => {
-    // Only rewrite in development - in production, Vercel handles it via vercel.json
+    const sharedRewrites = [
+      {
+        source: '/favicon.ico',
+        destination: '/favicon.svg',
+      },
+    ]
+
     if (process.env.NODE_ENV === 'development') {
-      return [
-        {
-          source: '/api/v1/:path*',
-          destination: 'http://localhost:8000/api/v1/:path*', // Proxy to local backend in dev
-        },
-      ]
+      sharedRewrites.push({
+        source: '/api/v1/:path*',
+        destination: 'http://localhost:8000/api/v1/:path*', // Proxy to local backend in dev
+      })
     }
-    // In production, return empty array - let Vercel rewrites handle it
-    return []
+
+    return sharedRewrites
   },
 }
 
