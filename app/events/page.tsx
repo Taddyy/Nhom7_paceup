@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { Suspense, useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -55,6 +55,20 @@ const QUICK_TAGS: Array<
 ]
 
 export default function EventsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen pt-[120px] flex items-center justify-center text-neutral-500">
+          Đang tải sự kiện...
+        </div>
+      }
+    >
+      <EventsPageInner />
+    </SuspENSE>
+  )
+}
+
+function EventsPageInner() {
   const searchParams = useSearchParams()
   const [events, setEvents] = useState<EventItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
