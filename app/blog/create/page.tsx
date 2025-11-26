@@ -96,7 +96,7 @@ export default function CreateBlogPage() {
     try {
       setIsLoading(true)
       await createBlogPost(formData)
-      setToast({ message: 'Tạo bài viết thành công!', type: 'success', isVisible: true })
+      setToast({ message: 'Bài viết đã được gửi và đang chờ đội ngũ phê duyệt.', type: 'success', isVisible: true })
       setTimeout(() => {
         router.push('/blog')
       }, 1500)
@@ -129,6 +129,9 @@ export default function CreateBlogPage() {
           <p className="text-base text-neutral-500">
             Khởi tạo câu chuyện truyền cảm hứng cho cộng đồng chạy bộ. Điền đầy đủ thông tin để đảm bảo bài viết hiển thị
             đúng phong cách hệ thống.
+          </p>
+          <p className="text-sm text-neutral-400">
+            * Bài viết sẽ hiển thị công khai sau khi đội ngũ admin phê duyệt (thường trong vòng 24 giờ).
           </p>
         </div>
       </div>

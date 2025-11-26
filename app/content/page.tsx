@@ -7,6 +7,7 @@ import ContentHighlightsSection, {
   type ArticleHighlight,
   type ContentHighlight
 } from '@/components/home/ContentHighlightsSection'
+import { getBlogPosts, type BlogPost } from '@/lib/api/blog-service'
 
 const DEFAULT_POSTS: ContentHighlight[] = [
   {
@@ -64,18 +65,47 @@ const DEFAULT_ARTICLES: ArticleHighlight[] = [
   }
 ]
 
-export default function ContentPage() {
-  const [posts] = useState<ContentHighlight[]>(DEFAULT_POSTS)
-  const [articles, setArticles] = useState<ArticleHighlight[]>(DEFAULT_ARTICLES)
+const mapBlogPostToHighlight = (post: BlogPost): ContentHighlight => {
+  const plain = (post.excerpt || post.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  const summary = plain.length > 200 ? `${plain.slice(0, 200)}…` : plain || 'Bài viết đang chờ cập nhật nội dung.'
 
-  // Hydrate from server data when available later
-  useEffect(() => {
-    // Placeholder for future fetch
-  }, [])
+  return {
+    id: post.id,
+    title: post.title,
+    author: post.author_name || 'PaceUp Studio',
+    date: new Date(post.created_at).toLocaleDateString('vi-VN'),
+    summary,
+    image: post.image_url || '/Image/Event.png'
+  }
+}
+
+export default function ContentPage() {
+  const [posts, setPosts] = useState<ContentHighlight[]>(DEFAULT_POSTS)
+  const [articles, setArticles] = useState<ArticleHighlight[]>(DEFAULT_ARTICLES)
+  const [isFetchingPosts, setIsFetchingPosts] = useState(true)
 
   const handleArticleAdded = (newArticle: ArticleHighlight) => {
     setArticles(prev => [newArticle, ...prev])
   }
+
+  useEffect(() => {
+    const fetchApprovedBlogs = async () => {
+      try {
+        setIsFetchingPosts(true)
+        const response = await getBlogPosts(1, 6, undefined, 'approved')
+        if (response.posts.length > 0) {
+          setPosts(response.posts.map(mapBlogPostToHighlight))
+        }
+      } catch (error) {
+        console.error('Failed to load blog posts:', error)
+        setPosts(DEFAULT_POSTS)
+      } finally {
+        setIsFetchingPosts(false)
+      }
+    }
+
+    fetchApprovedBlogs()
+  }, [])
 
   return (
     <div className="flex flex-col bg-white">
@@ -94,6 +124,7 @@ export default function ContentPage() {
             articles={articles} 
             showCreateButton={true}
             onArticleAdded={handleArticleAdded}
+            isLoadingBlogs={isFetchingPosts}
           />
         </div>
       </div>

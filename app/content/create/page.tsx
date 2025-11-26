@@ -113,7 +113,7 @@ export default function CreateBlogPage() {
       }
 
       await createBlogPost(finalFormData)
-      setToast({ message: 'Tạo bài viết thành công!', type: 'success', isVisible: true })
+      setToast({ message: 'Bài viết đã được gửi và đang chờ đội ngũ phê duyệt.', type: 'success', isVisible: true })
       setTimeout(() => {
         router.push('/content')
       }, 1500)
@@ -145,6 +145,9 @@ export default function CreateBlogPage() {
           <h1 className="text-3xl font-bold text-[#1c1c1c] md:text-[40px]">Xuất bản nội dung</h1>
           <p className="text-base text-neutral-500">
             Tạo bài viết nổi bật và tối ưu SEO nhờ khả năng đính kèm nội dung ẩn dành riêng cho bộ máy tìm kiếm.
+          </p>
+          <p className="text-sm text-neutral-400">
+            * Nội dung sẽ hiển thị ở trang public sau khi admin phê duyệt (dự kiến trong 24 giờ).
           </p>
         </div>
       </div>

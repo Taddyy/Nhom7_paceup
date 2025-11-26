@@ -33,13 +33,20 @@ export interface UpdateBlogPostRequest extends Partial<CreateBlogPostRequest> {}
 /**
  * Get all blog posts
  */
-export async function getBlogPosts(page: number = 1, limit: number = 10, author_id?: string): Promise<{
+export type BlogStatusFilter = 'pending' | 'approved' | 'rejected' | 'all'
+
+export async function getBlogPosts(
+  page: number = 1,
+  limit: number = 10,
+  author_id?: string,
+  status_filter: BlogStatusFilter = 'approved'
+): Promise<{
   posts: BlogPost[]
   total: number
   page: number
   limit: number
 }> {
-  const params: any = { page, limit }
+  const params: Record<string, string | number> = { page, limit, status_filter }
   if (author_id) {
     params.author_id = author_id
   }

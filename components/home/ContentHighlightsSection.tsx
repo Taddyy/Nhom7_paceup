@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ChangeEvent, FormEvent } from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createBlogPost } from '@/lib/api/blog-service'
 import RichTextEditor from '@/components/ui/RichTextEditor'
 import DropdownMenu, { type DropdownOption } from '@/components/ui/DropdownMenu'
@@ -58,6 +58,7 @@ interface ContentHighlightsSectionProps {
   articles: ArticleHighlight[]
   showCreateButton?: boolean
   onArticleAdded?: (article: ArticleHighlight) => void
+  isLoadingBlogs?: boolean
 }
 
 type ContentTab = 'articles' | 'blog'
@@ -177,9 +178,31 @@ const searchGifs = async (query: string): Promise<GifResult[]> => {
 /**
  * Content showcase mirroring the "Nội Dung Mới Nhất" section from Figma.
  */
-export default function ContentHighlightsSection({ posts, articles, showCreateButton, onArticleAdded }: ContentHighlightsSectionProps) {
+export default function ContentHighlightsSection({
+  posts,
+  articles,
+  showCreateButton,
+  onArticleAdded,
+  isLoadingBlogs = false
+}: ContentHighlightsSectionProps) {
   const [activeTab, setActiveTab] = useState<ContentTab>('blog')
   const [localArticles, setLocalArticles] = useState<ArticleHighlight[]>(articles)
+  const [blogSearchQuery, setBlogSearchQuery] = useState('')
+
+  useEffect(() => {
+    setLocalArticles(articles)
+  }, [articles])
+
+  const filteredPosts = useMemo(() => {
+    const keyword = blogSearchQuery.trim().toLowerCase()
+    if (!keyword) {
+      return posts
+    }
+    return posts.filter((post) => {
+      const haystacks = [post.title, post.summary, post.author].filter(Boolean)
+      return haystacks.some((field) => field.toLowerCase().includes(keyword))
+    })
+  }, [blogSearchQuery, posts])
 
   const tabButtonClass = (tab: ContentTab): string =>
     [
@@ -200,14 +223,7 @@ export default function ContentHighlightsSection({ posts, articles, showCreateBu
           </button>
         </div>
 
-        {showCreateButton && activeTab === 'blog' && (
-          <BlogComposer 
-            onPostCreated={() => {
-              // Refresh posts list after successful creation
-              window.location.reload()
-            }}
-          />
-        )}
+        {showCreateButton && activeTab === 'blog' && <BlogComposer />}
 
         {showCreateButton && activeTab === 'articles' && (
           <ArticleComposer 
@@ -222,44 +238,82 @@ export default function ContentHighlightsSection({ posts, articles, showCreateBu
         )}
 
         {activeTab === 'blog' ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
-            {posts.map((post) => (
-              <article key={post.id} className="flex flex-col gap-8">
-                <div className="h-[320px] relative rounded-[24px] overflow-hidden">
-                  <Image
-                    src={post.image}
-                    alt={post.title}
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 570px"
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/80" />
-                  <div className="absolute bottom-0 left-0 right-0 p-6 flex items-center justify-between text-white text-base">
-                    <p>{post.author}</p>
-                    <p>{post.date}</p>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-6">
-                  <div className="flex flex-col gap-3">
-                    <h3 className="font-bold text-[24px] leading-[32px] text-black">
-                      {post.title}
-                    </h3>
-                    <p
-                      className="font-medium text-[24px] leading-[32px] text-black/70 h-[94px] overflow-hidden"
-                      style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}
-                    >
-                      {post.summary}
-                    </p>
-                  </div>
-                  <Link
-                    href="/content"
-                    className="bg-[#1c1c1c] inline-flex items-center justify-center px-4 py-2 rounded-lg text-white uppercase text-sm tracking-wide shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.4),inset_4px_4px_6px_rgba(255,255,255,0.15)] self-start"
-                  >
-                    Đọc ngay
-                  </Link>
-                </div>
-              </article>
-            ))}
+          <div className="w-full flex flex-col gap-6 items-center">
+            <form
+              className="relative w-full max-w-[520px] self-center"
+              onSubmit={(event) => event.preventDefault()}
+            >
+              <label htmlFor="blog-search" className="sr-only">
+                Tìm kiếm blog
+              </label>
+              <input
+                id="blog-search"
+                type="search"
+                value={blogSearchQuery}
+                onChange={(event) => setBlogSearchQuery(event.target.value)}
+                placeholder="Tìm kiếm theo tiêu đề, tác giả..."
+                className="h-[56px] w-full rounded-[14px] border border-black/10 bg-white px-5 text-base text-[#1c1c1c] placeholder:text-neutral-400 shadow-[0_14px_40px_rgba(15,23,42,0.05)] focus:border-black focus:ring-2 focus:ring-black/10 focus:outline-none transition-all"
+              />
+              {blogSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setBlogSearchQuery('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/5 px-2 text-xs font-semibold text-black/60 hover:bg-black/10 transition"
+                >
+                  Xóa
+                </button>
+              )}
+            </form>
+
+            {isLoadingBlogs ? (
+              <div className="w-full rounded-[24px] border border-dashed border-neutral-300 py-12 text-center text-neutral-500">
+                Đang tải bài viết...
+              </div>
+            ) : filteredPosts.length === 0 ? (
+              <div className="w-full rounded-[24px] border border-dashed border-neutral-300 py-12 text-center text-neutral-500">
+                Không tìm thấy bài viết nào phù hợp với từ khóa.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
+                {filteredPosts.map((post) => (
+                  <article key={post.id} className="flex flex-col gap-8">
+                    <div className="h-[320px] relative rounded-[24px] overflow-hidden">
+                      <Image
+                        src={post.image}
+                        alt={post.title}
+                        fill
+                        sizes="(max-width: 1024px) 100vw, 570px"
+                        className="object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/80" />
+                      <div className="absolute bottom-0 left-0 right-0 p-6 flex items-center justify-between text-white text-base">
+                        <p>{post.author}</p>
+                        <p>{post.date}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-6">
+                      <div className="flex flex-col gap-3">
+                        <h3 className="font-bold text-[24px] leading-[32px] text-black">
+                          {post.title}
+                        </h3>
+                        <p
+                          className="font-medium text-[24px] leading-[32px] text-black/70 h-[94px] overflow-hidden"
+                          style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}
+                        >
+                          {post.summary}
+                        </p>
+                      </div>
+                      <Link
+                        href={`/blog/${post.id}`}
+                        className="bg-[#1c1c1c] inline-flex items-center justify-center px-4 py-2 rounded-lg text-white uppercase text-sm tracking-wide shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.4),inset_4px_4px_6px_rgba(255,255,255,0.15)] self-start"
+                      >
+                        Đọc ngay
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col w-full">
@@ -1535,7 +1589,7 @@ function ArticleComposer({ onArticleCreated }: { onArticleCreated?: (article: Ar
 /**
  * Blog Composer - Inline editor for creating blog posts
  */
-function BlogComposer({ onPostCreated }: { onPostCreated?: () => void }) {
+function BlogComposer() {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [title, setTitle] = useState('')
@@ -1611,9 +1665,6 @@ function BlogComposer({ onPostCreated }: { onPostCreated?: () => void }) {
       setTimeout(() => {
         setIsExpanded(false)
         setSuccess(false)
-        if (onPostCreated) {
-          onPostCreated()
-        }
       }, 1500)
     } catch (error: any) {
       console.error('Error creating post:', error)
@@ -1668,8 +1719,8 @@ function BlogComposer({ onPostCreated }: { onPostCreated?: () => void }) {
         </div>
 
         {success && (
-          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm">
-            Đăng bài viết thành công!
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-lg text-sm">
+            Bài viết đã được gửi và đang chờ đội ngũ PaceUp phê duyệt trước khi xuất hiện công khai.
           </div>
         )}
 
@@ -1767,6 +1818,10 @@ function BlogComposer({ onPostCreated }: { onPostCreated?: () => void }) {
             placeholder="Viết nội dung bài viết của bạn..."
           />
         </div>
+
+        <p className="text-xs text-neutral-500">
+          * Bài viết sẽ hiển thị ở trang Nội dung sau khi admin duyệt (thường trong vòng 24 giờ).
+        </p>
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-3 pt-2">
