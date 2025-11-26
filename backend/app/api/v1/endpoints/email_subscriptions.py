@@ -4,7 +4,8 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_admin_optional
+from app.core.database import get_db
+from app.api.v1.endpoints.admin import get_current_admin
 from app.models.email_subscription import EmailSubscription
 from app.schemas.email_subscription import (
   EmailSubscriptionCreate,
@@ -58,12 +59,9 @@ def list_email_subscriptions(
   skip: int = 0,
   limit: int = Query(50, le=200),
   db: Session = Depends(get_db),
-  current_admin=Depends(get_current_admin_optional),
+  current_admin=Depends(get_current_admin),
 ) -> Any:
   """Return paginated list of stored email addresses for admins."""
-  if current_admin is None:
-    raise HTTPException(status_code=403, detail="Admin access required")
-
   query = db.query(EmailSubscription).order_by(EmailSubscription.created_at.desc())
   total = query.count()
   items = query.offset(skip).limit(limit).all()
@@ -78,11 +76,8 @@ def list_email_subscriptions(
 def delete_email_subscription(
   subscription_id: str,
   db: Session = Depends(get_db),
-  current_admin=Depends(get_current_admin_optional),
+  current_admin=Depends(get_current_admin),
 ) -> None:
-  if current_admin is None:
-    raise HTTPException(status_code=403, detail="Admin access required")
-
   subscription = (
     db.query(EmailSubscription)
     .filter(EmailSubscription.id == subscription_id)
