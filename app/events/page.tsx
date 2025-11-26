@@ -64,7 +64,7 @@ export default function EventsPage() {
       }
     >
       <EventsPageInner />
-    </SuspENSE>
+    </Suspense>
   )
 }
 
