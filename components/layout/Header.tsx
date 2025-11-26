@@ -140,7 +140,7 @@ export default function Header({ floating = false }: HeaderProps) {
                 <Link
                   key={item.href}
                   href={href}
-                  className="font-medium text-sm text-white/80 whitespace-nowrap hover:text-white transition-colors"
+                  className="font-medium text-sm text-black/80 whitespace-nowrap hover:text-black transition-colors"
                 >
                   {label}
                 </Link>
