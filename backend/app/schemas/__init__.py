@@ -10,6 +10,12 @@ from app.schemas.email_subscription import (
     EmailSubscriptionRead,
     EmailSubscriptionList,
 )
+from app.schemas.password_reset import (
+    PasswordResetRequest,
+    PasswordResetVerify,
+    PasswordResetPerform,
+    PasswordResetTokenRead,
+)
 
 __all__ = [
     "User", "UserCreate", "UserResponse",
@@ -18,5 +24,6 @@ __all__ = [
     "Event", "EventCreate", "EventUpdate", "EventResponse", "EventRegistrationRequest",
     "ReportCreate", "ReportResponse", "ReportUpdate",
     "EmailSubscriptionBase", "EmailSubscriptionCreate", "EmailSubscriptionRead", "EmailSubscriptionList",
-]
+    "PasswordResetRequest", "PasswordResetVerify", "PasswordResetPerform", "PasswordResetTokenRead",
+] 
 

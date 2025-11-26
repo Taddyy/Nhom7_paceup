@@ -3,7 +3,7 @@ from typing import Optional
 
 from sqlalchemy import Column, DateTime, String
 
-from app.db.base_class import Base
+from app.core.database import Base
 
 
 class EmailSubscription(Base):

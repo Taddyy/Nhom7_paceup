@@ -241,6 +241,13 @@ export default function LoginPage() {
                 >
                   {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => router.push('/forgot-password')}
+                  className="mx-auto block text-sm font-medium text-black hover:text-black/70 underline-offset-4 hover:underline"
+                >
+                  Quên mật khẩu?
+                </button>
                 <p className="text-center text-base text-black/70">
                   Chưa có tài khoản?{' '}
                   <Link href="/register" className="font-medium text-black underline">
