@@ -1,141 +1,178 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import Image from 'next/image'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
 
-/**
- * Blog post detail page component
- * 
- * Displays a single blog post with full content. In the future, this will fetch data from backend API.
- */
 interface BlogPost {
   id: string
   title: string
   content: string
-  author: string
-  date: string
-  image?: string
   category: string
+  author_name: string
+  created_at: string
+  status: 'pending' | 'approved' | 'rejected'
+  image_url?: string | null
+}
+
+const stripHtml = (value: string): string => value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+
+const formatDate = (value: string): string => {
+  try {
+    return new Intl.DateTimeFormat('vi-VN', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    }).format(new Date(value))
+  } catch {
+    return value
+  }
 }
 
 export default function BlogPostPage() {
-  const params = useParams()
-  const router = useRouter()
+  const params = useParams<{ id: string }>()
   const [post, setPost] = useState<BlogPost | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let isMounted = true
     const fetchPost = async () => {
       try {
         setIsLoading(true)
         const { getBlogPost } = await import('@/lib/api/blog-service')
-        const postData = await getBlogPost(params.id as string)
-        setPost({
-          id: postData.id,
-          title: postData.title,
-          content: postData.content,
-          author: postData.author_name,
-          date: postData.created_at,
-          category: postData.category,
-          image: postData.image_url,
-        })
+        const data = await getBlogPost(params.id)
+        if (isMounted) {
+          setPost(data as BlogPost)
+        }
       } catch (err) {
-        console.error('Error fetching post:', err)
+        console.error('Error fetching blog detail:', err)
+        if (isMounted) {
+          setError('Không tìm thấy nội dung mà bạn yêu cầu.')
+        }
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
     fetchPost()
+    return () => {
+      isMounted = false
+    }
   }, [params.id])
+
+  const readingTime = useMemo(() => {
+    if (!post?.content) return '2 phút đọc'
+    const words = stripHtml(post.content).split(/\s+/).length
+    return `${Math.max(2, Math.round(words / 220))} phút đọc`
+  }, [post?.content])
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center">Đang tải...</div>
+      <div className="min-h-screen bg-[#f8f9fb] pt-[150px] pb-20">
+        <div className="mx-auto w-full max-w-[1200px] px-4 text-center text-neutral-500">
+          Đang tải nội dung...
+        </div>
       </div>
     )
   }
 
-  if (!post) {
+  if (error || !post) {
     return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Không tìm thấy bài viết</h1>
-          <Link href="/blog" className="text-primary hover:underline">
-            Quay lại danh sách blog
+      <div className="min-h-screen bg-[#f8f9fb] pt-[150px] pb-20">
+        <div className="mx-auto w-full max-w-[1200px] px-4 text-center">
+          <h1 className="text-3xl font-semibold text-neutral-900 mb-4">Oops...</h1>
+          <p className="text-neutral-600 mb-6">{error ?? 'Bài viết này không tồn tại hoặc đã bị xoá.'}</p>
+          <Link href="/blog" className="inline-flex items-center gap-2 rounded-full border border-black/10 px-6 py-3 text-sm font-semibold text-[#1c1c1c] hover:border-black hover:bg-black/5 transition">
+            ← Quay lại Blog
           </Link>
         </div>
       </div>
     )
   }
 
+  const isPending = post.status !== 'approved'
+
   return (
-    <div className="container mx-auto max-w-4xl px-4 pb-12 pt-[150px] sm:pt-[170px]">
-      {/* Back Button */}
-      <Link
-        href="/blog"
-        className="inline-flex items-center text-primary hover:text-primary-dark mb-6"
-      >
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Quay lại blog
-      </Link>
-
-      {/* Post Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-sm text-primary font-semibold">{post.category}</span>
-          <span className="text-sm text-gray-500">
-            {new Date(post.date).toLocaleDateString('vi-VN')}
-          </span>
+    <div className="min-h-screen bg-[#f8f9fb] pt-[140px] pb-20">
+      <div className="mx-auto w-full max-w-[1200px] px-4">
+        <div className="mb-8 flex items-center gap-3 text-sm text-neutral-500">
+          <Link href="/blog" className="inline-flex items-center gap-2 rounded-full border border-black/10 px-6 py-2 text-sm font-semibold text-[#1c1c1c] hover:border-black hover:bg-black/5 transition">
+            ← Danh sách blog
+          </Link>
+          {isPending && (
+            <span className="rounded-full bg-amber-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+              Bản xem trước
+            </span>
+          )}
         </div>
-        <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
-        <div className="flex items-center text-gray-600">
-          <span>Bởi {post.author}</span>
-        </div>
-      </div>
 
-      {/* Post Image */}
-      {post.image && (
-        <div className="relative w-full h-96 mb-8">
-          <Image
-            src={post.image}
-            alt={post.title}
-            fill
-            className="object-cover rounded-lg"
-          />
-        </div>
-      )}
+        <article className="space-y-10">
+          <header className="rounded-[32px] border border-black/5 bg-white px-6 py-8 shadow-[0_30px_80px_rgba(15,23,42,0.08)] md:px-12 md:py-10">
+            <div className="flex flex-wrap items-center gap-4 text-xs font-semibold uppercase tracking-[0.4em] text-black/40">
+              <span className="rounded-full bg-black/5 px-3 py-1 text-[11px] tracking-[0.3em] text-black/70">
+                {post.category || 'Blog'}
+              </span>
+              <span>{formatDate(post.created_at)}</span>
+              <span className="text-black/30">{readingTime}</span>
+            </div>
+            <h1 className="mt-6 text-3xl font-bold text-[#1c1c1c] md:text-[44px] md:leading-tight">{post.title}</h1>
+            <div className="mt-6 flex flex-wrap items-center gap-6 text-sm text-neutral-500">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-full bg-black text-white flex items-center justify-center font-semibold uppercase">
+                  {post.author_name?.slice(0, 2) ?? 'PU'}
+                </div>
+                <div>
+                  <p className="font-semibold text-[#1c1c1c]">{post.author_name ?? 'PaceUp Studio'}</p>
+                  <p className="text-xs uppercase tracking-[0.3em] text-black/40">Tác giả</p>
+                </div>
+              </div>
+              {isPending && (
+                <p className="rounded-[12px] bg-amber-50 px-4 py-2 text-sm text-amber-700">
+                  * Bài viết đang chờ đội ngũ PaceUp phê duyệt trước khi hiển thị công khai.
+                </p>
+              )}
+            </div>
+          </header>
 
-      {/* Post Content */}
-      <div className="prose prose-lg max-w-none">
-        {post.content.split('\n').map((paragraph, index) => (
-          <p key={index} className="mb-4">{paragraph}</p>
-        ))}
-      </div>
+          {post.image_url && (
+            <div className="rounded-[32px] border border-black/5 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.06)]">
+              <div className="relative w-full overflow-hidden rounded-[32px]">
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  <Image
+                    src={post.image_url}
+                    alt={post.title}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 1200px"
+                    className="object-cover"
+                    priority
+                    unoptimized
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
-      {/* Actions */}
-      <div className="mt-12 pt-8 border-t flex justify-between items-center">
-        <div className="flex space-x-4">
-          <button className="flex items-center text-gray-600 hover:text-primary">
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-            Thích
-          </button>
-          <button className="flex items-center text-gray-600 hover:text-primary">
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            Bình luận
-          </button>
-        </div>
-        <button className="text-gray-600 hover:text-primary">
-          Chia sẻ
-        </button>
+          <section className="rounded-[32px] border border-black/5 bg-white px-6 py-10 shadow-[0_30px_80px_rgba(15,23,42,0.06)] md:px-12">
+            <div
+              className="prose prose-lg max-w-none text-[#1c1c1c] prose-img:rounded-3xl prose-img:border prose-img:border-black/5 prose-img:shadow-lg prose-img:mx-auto prose-img:max-w-[1200px]"
+              dangerouslySetInnerHTML={{ __html: post.content }}
+            />
+          </section>
+
+          <footer className="rounded-[32px] border border-dashed border-black/10 bg-white/60 px-6 py-8 text-sm text-neutral-500 md:px-10">
+            <p>
+              Chia sẻ cảm nhận hoặc góp ý cho đội ngũ PaceUp bằng cách gửi email về{' '}
+              <a href="mailto:hello@paceup.vn" className="text-[#1c1c1c] underline decoration-dotted">
+                hello@paceup.vn
+              </a>
+              . Đội ngũ kiểm duyệt sẽ phản hồi trong vòng 24 giờ làm việc.
+            </p>
+          </footer>
+        </article>
       </div>
     </div>
   )
