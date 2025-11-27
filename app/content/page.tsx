@@ -13,9 +13,33 @@ const mapContentPostToArticle = (post: ContentPost): ArticleHighlight => {
   const plainText = (post.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   const caption = plainText.length > 200 ? `${plainText.slice(0, 200)}…` : plainText || ''
   
-  // Extract media URLs from content (if any) or use image_url
+  // Extract media URLs from HTML content (img and video tags)
   const media: string[] = []
-  if (post.image_url) {
+  
+  // Extract img src URLs (for GIFs and images)
+  const imgMatches = (post.content || '').match(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi)
+  if (imgMatches) {
+    imgMatches.forEach((imgTag) => {
+      const srcMatch = imgTag.match(/src=["']([^"']+)["']/i)
+      if (srcMatch && srcMatch[1]) {
+        media.push(srcMatch[1])
+      }
+    })
+  }
+  
+  // Extract video src URLs
+  const videoMatches = (post.content || '').match(/<video[^>]+src=["']([^"']+)["'][^>]*>/gi)
+  if (videoMatches) {
+    videoMatches.forEach((videoTag) => {
+      const srcMatch = videoTag.match(/src=["']([^"']+)["']/i)
+      if (srcMatch && srcMatch[1]) {
+        media.push(srcMatch[1])
+      }
+    })
+  }
+  
+  // Fallback to image_url if no media found in content
+  if (media.length === 0 && post.image_url) {
     media.push(post.image_url)
   }
   

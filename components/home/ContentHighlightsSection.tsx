@@ -400,6 +400,12 @@ const ArticleCard = ({
   const editImageInputRef = useRef<HTMLInputElement>(null)
   const editVideoInputRef = useRef<HTMLInputElement>(null)
   
+  // GIF picker state for edit mode
+  const [isEditGifPickerOpen, setEditGifPickerOpen] = useState(false)
+  const [editGifResults, setEditGifResults] = useState<GifResult[]>([])
+  const [isLoadingEditGifs, setIsLoadingEditGifs] = useState(false)
+  const [editGifQuery, setEditGifQuery] = useState('')
+  
   // Report and hide states
   const [isReportOpen, setIsReportOpen] = useState(false)
   const [isHidden, setIsHidden] = useState(false)
@@ -665,14 +671,41 @@ const ArticleCard = ({
     setIsEditMode(true)
     setEditTitle(article.title)
     setEditCaption(article.caption)
-    setEditMedia(article.media.map((url, idx) => ({ id: `media-${idx}`, type: 'image' as const, url })))
+    // Initialize editMedia from article.media - detect type (image/video/gif)
+    setEditMedia(article.media.map((url, idx) => {
+      // Try to detect type from URL or default to image
+      let type: 'image' | 'video' | 'gif' = 'image'
+      if (url.includes('.gif') || url.includes('giphy.com') || url.includes('tenor.com')) {
+        type = 'gif'
+      } else if (url.match(/\.(mp4|webm|ogg)$/i)) {
+        type = 'video'
+      }
+      return { id: `media-${idx}`, type, url }
+    }))
+    // Reset GIF picker state
+    setEditGifPickerOpen(false)
+    setEditGifQuery('')
+    setEditGifResults([])
   }
   
   const handleCancelEdit = () => {
     setIsEditMode(false)
     setEditTitle(article.title)
     setEditCaption(article.caption)
-    setEditMedia(article.media.map((url, idx) => ({ id: `media-${idx}`, type: 'image' as const, url })))
+    // Reset to original media
+    setEditMedia(article.media.map((url, idx) => {
+      let type: 'image' | 'video' | 'gif' = 'image'
+      if (url.includes('.gif') || url.includes('giphy.com') || url.includes('tenor.com')) {
+        type = 'gif'
+      } else if (url.match(/\.(mp4|webm|ogg)$/i)) {
+        type = 'video'
+      }
+      return { id: `media-${idx}`, type, url }
+    }))
+    // Reset GIF picker state
+    setEditGifPickerOpen(false)
+    setEditGifQuery('')
+    setEditGifResults([])
   }
   
   const handleSaveEdit = async () => {
@@ -682,38 +715,79 @@ const ArticleCard = ({
     }
     
     if (!editTitle.trim() && !editCaption.trim() && editMedia.length === 0) {
-      alert('Vui lòng nhập nội dung hoặc thêm ảnh/video.')
+      alert('Vui lòng nhập nội dung hoặc thêm ảnh/video/GIF.')
       return
     }
     
     try {
       setIsSaving(true)
       
-      // Upload first image if available (for image_url)
+      // Upload images if available (for image_url and embedding in content)
       let imageUrl: string | undefined = undefined
-      const firstImage = editMedia.find(m => m.type === 'image' && m.file)
-      if (firstImage?.file) {
-        const uploadFormData = new FormData()
-        uploadFormData.append('file', firstImage.file)
-        try {
-          const uploadResponse = await fetch('/api/upload', {
-            method: 'POST',
-            body: uploadFormData,
-          })
-          if (uploadResponse.ok) {
-            const uploadData = await uploadResponse.json()
-            imageUrl = uploadData.url
+      const imageUploadMap = new Map<string, string>() // Map from item.id to uploaded URL
+      
+      // Upload all image files
+      for (const item of editMedia) {
+        if (item.type === 'image' && item.file) {
+          const uploadFormData = new FormData()
+          uploadFormData.append('file', item.file)
+          try {
+            const uploadResponse = await fetch('/api/upload', {
+              method: 'POST',
+              body: uploadFormData,
+            })
+            if (uploadResponse.ok) {
+              const uploadData = await uploadResponse.json()
+              const uploadedUrl = uploadData.url
+              imageUploadMap.set(item.id, uploadedUrl)
+              // Use first uploaded image as image_url
+              if (!imageUrl) {
+                imageUrl = uploadedUrl
+              }
+            }
+          } catch (uploadError) {
+            console.error('Error uploading image:', uploadError)
+            // Continue without this image if upload fails
           }
-        } catch (uploadError) {
-          console.error('Error uploading image:', uploadError)
         }
-      } else if (editMedia.length > 0 && editMedia[0].type === 'image') {
-        // Use existing image URL if no new file
-        imageUrl = editMedia[0].url
       }
       
-      // Convert caption to HTML content
-      const htmlContent = editCaption.trim().split('\n').map(line => `<p>${line}</p>`).join('') || `<p>${editTitle}</p>`
+      // Use first image URL if no file uploads
+      if (!imageUrl) {
+        const firstImage = editMedia.find(m => m.type === 'image')
+        if (firstImage) {
+          imageUrl = firstImage.url
+        }
+      }
+      
+      // Convert caption to HTML content (preserve line breaks)
+      let htmlContent = editCaption.trim().split('\n').map(line => `<p>${line}</p>`).join('') || `<p>${editTitle}</p>`
+      
+      // Embed media (GIFs, videos, images) into HTML content
+      const mediaHtml: string[] = []
+      editMedia.forEach((item) => {
+        if (item.type === 'gif') {
+          // Embed GIF as img tag
+          mediaHtml.push(`<img src="${item.url}" alt="GIF" style="max-width: 100%; height: auto; border-radius: 12px; margin: 8px 0;" />`)
+        } else if (item.type === 'video') {
+          // Embed video as video tag
+          mediaHtml.push(`<video src="${item.url}" controls style="max-width: 100%; height: auto; border-radius: 12px; margin: 8px 0;"></video>`)
+        } else if (item.type === 'image') {
+          // For uploaded images, use the uploaded URL from map
+          // For image URLs (not files), use the URL directly
+          const imageUrlToUse = item.file 
+            ? imageUploadMap.get(item.id) || item.url
+            : item.url
+          if (imageUrlToUse) {
+            mediaHtml.push(`<img src="${imageUrlToUse}" alt="Image" style="max-width: 100%; height: auto; border-radius: 12px; margin: 8px 0;" />`)
+          }
+        }
+      })
+      
+      // Combine caption and media HTML
+      if (mediaHtml.length > 0) {
+        htmlContent = htmlContent + (htmlContent ? '<br/>' : '') + mediaHtml.join('')
+      }
       
       // Update content post via API
       const updatedPost = await updateContentPost(article.content_post_id, {
@@ -797,6 +871,55 @@ const ArticleCard = ({
       }
       return prev.filter(m => m.id !== id)
     })
+  }
+  
+  // GIF picker functions for edit mode
+  const loadEditTrendingGifs = useCallback(async () => {
+    try {
+      setIsLoadingEditGifs(true)
+      const results = await fetchTrendingGifs()
+      setEditGifResults(results)
+    } catch (error) {
+      console.error('Không thể tải GIF', error)
+    } finally {
+      setIsLoadingEditGifs(false)
+    }
+  }, [])
+  
+  const handleEditGifSearch = useCallback(async () => {
+    const trimmedQuery = editGifQuery.trim()
+    if (!trimmedQuery) {
+      await loadEditTrendingGifs()
+      return
+    }
+    try {
+      setIsLoadingEditGifs(true)
+      const results = await searchGifs(trimmedQuery)
+      setEditGifResults(results)
+    } catch (error) {
+      console.error('Không thể tìm GIF', error)
+      setEditGifResults([])
+    } finally {
+      setIsLoadingEditGifs(false)
+    }
+  }, [editGifQuery, loadEditTrendingGifs])
+  
+  const handleEditGifToggle = useCallback(() => {
+    const nextState = !isEditGifPickerOpen
+    setEditGifPickerOpen(nextState)
+    if (nextState && editGifResults.length === 0 && !isLoadingEditGifs) {
+      void loadEditTrendingGifs()
+    }
+  }, [editGifResults.length, isEditGifPickerOpen, isLoadingEditGifs, loadEditTrendingGifs])
+  
+  const handleSelectEditGif = (gif: GifResult) => {
+    setEditMedia(prev => [...prev, {
+      id: generateId(),
+      type: 'gif',
+      url: gif.url,
+      preview: gif.previewUrl
+    }])
+    setEditGifPickerOpen(false)
   }
 
   const hasTitleOrCaption = (article.title && article.title.trim()) || (article.caption && article.caption.trim())
@@ -991,6 +1114,52 @@ const ArticleCard = ({
             </div>
           )}
           
+          {/* GIF Picker for Edit Mode */}
+          {isEditGifPickerOpen && (
+            <div className="w-full rounded-2xl border border-black/5 bg-white p-4">
+              <div className="mb-3 flex gap-3">
+                <input
+                  type="text"
+                  className="flex-1 rounded-xl border border-black/5 px-3 py-2 text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10"
+                  placeholder="Tìm kiếm GIF bạn muốn..."
+                  value={editGifQuery}
+                  onChange={(event) => setEditGifQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      void handleEditGifSearch()
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800"
+                  onClick={() => void handleEditGifSearch()}
+                >
+                  Tìm
+                </button>
+              </div>
+              {isLoadingEditGifs ? (
+                <p className="text-sm text-neutral-500">Đang tải GIF...</p>
+              ) : editGifResults.length === 0 ? (
+                <p className="text-sm text-neutral-500">Không tìm thấy GIF phù hợp.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {editGifResults.map((gif) => (
+                    <button
+                      type="button"
+                      key={gif.id}
+                      className="overflow-hidden rounded-2xl border border-transparent transition hover:border-neutral-900/20 aspect-square"
+                      onClick={() => handleSelectEditGif(gif)}
+                    >
+                      <img src={gif.previewUrl} alt="GIF" className="w-full h-full object-cover" loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
           {/* Media Upload Buttons */}
           <div className="flex items-center gap-3">
             <button
@@ -1025,6 +1194,14 @@ const ArticleCard = ({
               className="hidden"
               multiple
             />
+            <button
+              type="button"
+              onClick={handleEditGifToggle}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-200 text-sm text-neutral-700 hover:bg-neutral-50 transition"
+            >
+              <Image src="/Icon/gif.svg" alt="GIF" width={20} height={20} />
+              Thêm GIF
+            </button>
           </div>
           
           {/* Action Buttons */}
@@ -1638,29 +1815,64 @@ function ArticleComposer({
       const firstLine = caption.trim().split('\n')[0]
       const finalTitle = firstLine || 'Bài viết mới'
       
-      // Upload first image if available (for image_url)
+      // Upload images if available (for image_url and embedding in content)
       let imageUrl: string | undefined = undefined
-      const firstImage = media.find(m => m.type === 'image' && m.file)
-      if (firstImage?.file) {
-        const uploadFormData = new FormData()
-        uploadFormData.append('file', firstImage.file)
-        try {
-          const uploadResponse = await fetch('/api/upload', {
-            method: 'POST',
-            body: uploadFormData,
-          })
-          if (uploadResponse.ok) {
-            const uploadData = await uploadResponse.json()
-            imageUrl = uploadData.url
+      const imageUploadMap = new Map<string, string>() // Map from item.id to uploaded URL
+      
+      // Upload all image files
+      for (const item of media) {
+        if (item.type === 'image' && item.file) {
+          const uploadFormData = new FormData()
+          uploadFormData.append('file', item.file)
+          try {
+            const uploadResponse = await fetch('/api/upload', {
+              method: 'POST',
+              body: uploadFormData,
+            })
+            if (uploadResponse.ok) {
+              const uploadData = await uploadResponse.json()
+              const uploadedUrl = uploadData.url
+              imageUploadMap.set(item.id, uploadedUrl)
+              // Use first uploaded image as image_url
+              if (!imageUrl) {
+                imageUrl = uploadedUrl
+              }
+            }
+          } catch (uploadError) {
+            console.error('Error uploading image:', uploadError)
+            // Continue without this image if upload fails
           }
-        } catch (uploadError) {
-          console.error('Error uploading image:', uploadError)
-          // Continue without image_url if upload fails
         }
       }
       
       // Convert caption to HTML content (preserve line breaks)
-      const htmlContent = caption.trim().split('\n').map(line => `<p>${line}</p>`).join('')
+      let htmlContent = caption.trim().split('\n').map(line => `<p>${line}</p>`).join('')
+      
+      // Embed media (GIFs, videos, images) into HTML content
+      const mediaHtml: string[] = []
+      media.forEach((item) => {
+        if (item.type === 'gif') {
+          // Embed GIF as img tag
+          mediaHtml.push(`<img src="${item.url}" alt="GIF" style="max-width: 100%; height: auto; border-radius: 12px; margin: 8px 0;" />`)
+        } else if (item.type === 'video') {
+          // Embed video as video tag
+          mediaHtml.push(`<video src="${item.url}" controls style="max-width: 100%; height: auto; border-radius: 12px; margin: 8px 0;"></video>`)
+        } else if (item.type === 'image') {
+          // For uploaded images, use the uploaded URL from map
+          // For image URLs (not files), use the URL directly
+          const imageUrlToUse = item.file 
+            ? imageUploadMap.get(item.id) || item.url
+            : item.url
+          if (imageUrlToUse) {
+            mediaHtml.push(`<img src="${imageUrlToUse}" alt="Image" style="max-width: 100%; height: auto; border-radius: 12px; margin: 8px 0;" />`)
+          }
+        }
+      })
+      
+      // Combine caption and media HTML
+      if (mediaHtml.length > 0) {
+        htmlContent = htmlContent + (htmlContent ? '<br/>' : '') + mediaHtml.join('')
+      }
       
       // Create content post via API
       await createContentPost({
