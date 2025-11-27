@@ -89,7 +89,7 @@ export default function ProfilePage() {
   const fetchMyPosts = async () => {
     try {
       if (!user?.id) return
-      const res = await getBlogPosts(1, 100, user.id)
+      const res = await getBlogPosts(1, 100, user.id, 'all') // Get all posts (pending, approved, rejected)
       setMyPosts(res.posts)
     } catch (error) {
       console.error('Error fetching posts:', error)

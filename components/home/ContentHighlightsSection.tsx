@@ -5,6 +5,8 @@ import Link from 'next/link'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createBlogPost } from '@/lib/api/blog-service'
+import { createContentPost } from '@/lib/api/content-service'
+import { getCurrentUser } from '@/lib/api/auth-service'
 import RichTextEditor from '@/components/ui/RichTextEditor'
 import DropdownMenu, { type DropdownOption } from '@/components/ui/DropdownMenu'
 import CustomSelect, { type SelectOption } from '@/components/ui/CustomSelect'
@@ -58,6 +60,7 @@ interface ContentHighlightsSectionProps {
   articles: ArticleHighlight[]
   showCreateButton?: boolean
   onArticleAdded?: (article: ArticleHighlight) => void
+  onContentPostCreated?: () => void
   isLoadingBlogs?: boolean
 }
 
@@ -183,6 +186,7 @@ export default function ContentHighlightsSection({
   articles,
   showCreateButton,
   onArticleAdded,
+  onContentPostCreated,
   isLoadingBlogs = false
 }: ContentHighlightsSectionProps) {
   const [activeTab, setActiveTab] = useState<ContentTab>('blog')
@@ -232,6 +236,12 @@ export default function ContentHighlightsSection({
               setLocalArticles(prev => [newArticle, ...prev])
               if (onArticleAdded) {
                 onArticleAdded(newArticle)
+              }
+            }}
+            onContentPostCreated={() => {
+              // Trigger refresh of content posts
+              if (onContentPostCreated) {
+                onContentPostCreated()
               }
             }}
           />
@@ -1112,10 +1122,16 @@ const HeartIcon = ({ filled }: { filled: boolean }) => (
  * Article Composer - Inline editor for creating articles (Bài viết tab)
  * Based on Figma design node-id 214:554
  */
-function ArticleComposer({ onArticleCreated }: { onArticleCreated?: (article: ArticleHighlight) => void }) {
+function ArticleComposer({ 
+  onArticleCreated,
+  onContentPostCreated 
+}: { 
+  onArticleCreated?: (article: ArticleHighlight) => void
+  onContentPostCreated?: () => void
+}) {
   const [caption, setCaption] = useState('')
   const [title, setTitle] = useState('')
-  const [media, setMedia] = useState<Array<{ id: string; type: 'image' | 'video' | 'gif'; url: string; preview?: string }>>([])
+  const [media, setMedia] = useState<Array<{ id: string; type: 'image' | 'video' | 'gif'; url: string; preview?: string; file?: File }>>([])
   const [isGifPickerOpen, setGifPickerOpen] = useState(false)
   const [isEmojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const [emojiSearchQuery, setEmojiSearchQuery] = useState('')
@@ -1124,6 +1140,7 @@ function ArticleComposer({ onArticleCreated }: { onArticleCreated?: (article: Ar
   const [isLoadingGifs, setIsLoadingGifs] = useState(false)
   const [gifQuery, setGifQuery] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -1271,7 +1288,8 @@ function ArticleComposer({ onArticleCreated }: { onArticleCreated?: (article: Ar
         id: generateId(),
         type,
         url: objectUrl,
-        preview: objectUrl
+        preview: objectUrl,
+        file: file
       }])
     })
     event.target.value = ''
@@ -1295,17 +1313,53 @@ function ArticleComposer({ onArticleCreated }: { onArticleCreated?: (article: Ar
 
     try {
       setIsSubmitting(true)
+      setError(null)
+      
+      // Get current user info
+      const currentUser = await getCurrentUser()
       
       // Generate title from first line of caption or default
       const firstLine = caption.trim().split('\n')[0]
       const finalTitle = firstLine || 'Bài viết mới'
       
-      // Create article object
+      // Upload first image if available (for image_url)
+      let imageUrl: string | undefined = undefined
+      const firstImage = media.find(m => m.type === 'image' && m.file)
+      if (firstImage?.file) {
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', firstImage.file)
+        try {
+          const uploadResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: uploadFormData,
+          })
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json()
+            imageUrl = uploadData.url
+          }
+        } catch (uploadError) {
+          console.error('Error uploading image:', uploadError)
+          // Continue without image_url if upload fails
+        }
+      }
+      
+      // Convert caption to HTML content (preserve line breaks)
+      const htmlContent = caption.trim().split('\n').map(line => `<p>${line}</p>`).join('')
+      
+      // Create content post via API
+      await createContentPost({
+        title: finalTitle,
+        content: htmlContent || '<p>Bài viết mới</p>',
+        category: 'general',
+        image_url: imageUrl
+      })
+      
+      // Create article object for local display
       const newArticle: ArticleHighlight = {
         id: generateId(),
-        author: 'Bạn', // This should come from current user
-        handle: '@user',
-        avatar: '/Image/Run 1.png', // This should come from current user
+        author: currentUser.full_name || 'Bạn',
+        handle: `@${currentUser.email?.split('@')[0] || 'user'}`,
+        avatar: currentUser.avatar || '/Image/Run 1.png',
         timestamp: 'Vừa xong',
         title: finalTitle,
         caption: caption.trim(),
@@ -1317,6 +1371,11 @@ function ArticleComposer({ onArticleCreated }: { onArticleCreated?: (article: Ar
       if (onArticleCreated) {
         onArticleCreated(newArticle)
       }
+      
+      // Notify parent to refresh content posts
+      if (onContentPostCreated) {
+        onContentPostCreated()
+      }
 
       // Reset form
       setCaption('')
@@ -1324,8 +1383,9 @@ function ArticleComposer({ onArticleCreated }: { onArticleCreated?: (article: Ar
       setMedia([])
       setGifPickerOpen(false)
       setGifQuery('')
-    } catch (error) {
-      console.error('Error creating article:', error)
+    } catch (error: any) {
+      console.error('Error creating content post:', error)
+      setError(error?.response?.data?.detail || error?.message || 'Có lỗi xảy ra khi đăng bài viết.')
     } finally {
       setIsSubmitting(false)
     }
@@ -1350,6 +1410,11 @@ function ArticleComposer({ onArticleCreated }: { onArticleCreated?: (article: Ar
       }}
     >
       <form onSubmit={handleSubmit} className="box-border content-stretch flex flex-col gap-[40px] items-start overflow-clip px-[24px] py-[16px] relative rounded-[inherit]">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm w-full">
+            {error}
+          </div>
+        )}
         <div className="h-[62px] relative shrink-0 w-full">
           <textarea
             ref={textareaRef}
