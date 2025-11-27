@@ -898,6 +898,9 @@ const ArticleCard = ({
       return
     }
     
+    // Store content_post_id in a const to ensure TypeScript knows it's defined
+    const postId = article.content_post_id
+    
     // Show confirmation dialog with negative type (red button)
     setNotificationDialog({
       isOpen: true,
@@ -910,7 +913,7 @@ const ArticleCard = ({
         setNotificationDialog(prev => ({ ...prev, isOpen: false }))
         try {
           setIsDeleting(true)
-          await deleteContentPost(article.content_post_id)
+          await deleteContentPost(postId)
           
           if (onArticleDeleted) {
             onArticleDeleted(article.id)
