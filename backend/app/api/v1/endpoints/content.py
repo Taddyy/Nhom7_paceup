@@ -42,7 +42,11 @@ async def get_content_posts(
     """
     offset = (page - 1) * limit
     
-    query = db.query(BlogPost).filter(BlogPost.status == "approved")
+    # Only get content posts (post_type="content") that are approved
+    query = db.query(BlogPost).filter(
+        BlogPost.status == "approved",
+        BlogPost.post_type == "content"
+    )
     
     if author_id:
         query = query.filter(BlogPost.author_id == author_id)
@@ -88,7 +92,10 @@ async def get_content_posts(
 @router.get("/posts/{post_id}", response_model=BlogPostResponse)
 async def get_content_post(post_id: str, db: Session = Depends(get_db)):
     """Get single content post by ID"""
-    post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
+    post = db.query(BlogPost).filter(
+        BlogPost.id == post_id,
+        BlogPost.post_type == "content"
+    ).first()
     
     if not post:
         raise HTTPException(
@@ -143,6 +150,7 @@ async def create_content_post(
         category=post_data.category,
         image_url=post_data.image_url,
         status="approved",  # Auto-approved for content posts
+        post_type="content",  # Mark as content post
         author_id=user_id,
     )
     
@@ -186,7 +194,10 @@ async def update_content_post(
             detail="Not authenticated",
         )
     
-    post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
+    post = db.query(BlogPost).filter(
+        BlogPost.id == post_id,
+        BlogPost.post_type == "content"
+    ).first()
     
     if not post:
         raise HTTPException(
@@ -244,7 +255,10 @@ async def delete_content_post(
             detail="Not authenticated",
         )
     
-    post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
+    post = db.query(BlogPost).filter(
+        BlogPost.id == post_id,
+        BlogPost.post_type == "content"
+    ).first()
     
     if not post:
         raise HTTPException(

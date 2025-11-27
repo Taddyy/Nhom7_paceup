@@ -25,8 +25,9 @@ class TestListContentPosts:
     
     def test_list_content_posts_with_pagination(self, client, test_blog_post, db_session):
         """Test listing content posts with pagination"""
-        # Update post status to approved so it appears in content posts
+        # Update post to be a content post (approved and post_type="content")
         test_blog_post.status = "approved"
+        test_blog_post.post_type = "content"
         db_session.commit()
         
         response = client.get("/api/v1/content/posts?page=1&limit=10")
@@ -40,8 +41,9 @@ class TestListContentPosts:
     
     def test_list_content_posts_filter_by_author(self, client, test_blog_post, test_user, db_session):
         """Test listing content posts filtered by author"""
-        # Update post status to approved so it appears in content posts
+        # Update post to be a content post (approved and post_type="content")
         test_blog_post.status = "approved"
+        test_blog_post.post_type = "content"
         db_session.commit()
         
         response = client.get(f"/api/v1/content/posts?author_id={test_user.id}")
@@ -71,6 +73,7 @@ class TestGetContentPost:
     def test_get_content_post_by_id(self, client, test_blog_post, db_session):
         """Test getting content post by ID"""
         test_blog_post.status = "approved"
+        test_blog_post.post_type = "content"
         db_session.commit()
         
         response = client.get(f"/api/v1/content/posts/{test_blog_post.id}")
@@ -150,6 +153,7 @@ class TestUpdateContentPost:
     def test_update_own_content_post(self, client, auth_headers, test_blog_post, db_session):
         """Test updating own content post"""
         test_blog_post.status = "approved"
+        test_blog_post.post_type = "content"
         db_session.commit()
         
         update_data = {
@@ -185,6 +189,7 @@ class TestUpdateContentPost:
         
         # Update post to belong to other user
         test_blog_post.status = "approved"
+        test_blog_post.post_type = "content"
         test_blog_post.author_id = other_user.id
         db_session.commit()
         
@@ -203,6 +208,7 @@ class TestUpdateContentPost:
     def test_update_content_post_no_token(self, client, test_blog_post, db_session):
         """Test updating content post without authentication"""
         test_blog_post.status = "approved"
+        test_blog_post.post_type = "content"
         db_session.commit()
         
         update_data = {
@@ -223,6 +229,7 @@ class TestDeleteContentPost:
     def test_delete_own_content_post(self, client, auth_headers, test_blog_post, db_session):
         """Test deleting own content post"""
         test_blog_post.status = "approved"
+        test_blog_post.post_type = "content"
         db_session.commit()
         
         response = client.delete(
@@ -255,6 +262,7 @@ class TestDeleteContentPost:
         
         # Update post to belong to other user
         test_blog_post.status = "approved"
+        test_blog_post.post_type = "content"
         test_blog_post.author_id = other_user.id
         db_session.commit()
         
@@ -268,6 +276,7 @@ class TestDeleteContentPost:
     def test_delete_content_post_no_token(self, client, test_blog_post, db_session):
         """Test deleting content post without authentication"""
         test_blog_post.status = "approved"
+        test_blog_post.post_type = "content"
         db_session.commit()
         
         response = client.delete(f"/api/v1/content/posts/{test_blog_post.id}")

@@ -9,7 +9,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate": "cd backend && python run_migrations.py",
+    "migrate:current": "cd backend && python run_migrations.py --current",
+    "migrate:history": "cd backend && python run_migrations.py --history"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.7",

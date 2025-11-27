@@ -18,6 +18,7 @@ class BlogPost(Base):
     category = Column(String(100), nullable=False)
     image_url = Column(String(500))
     status = Column(String(20), default="pending", nullable=False)  # pending, approved, rejected
+    post_type = Column(String(20), default="blog", nullable=False, index=True)  # blog, content - to distinguish between blog posts and content posts
     author_id = Column(String(255), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())

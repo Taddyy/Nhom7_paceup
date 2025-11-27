@@ -4,6 +4,7 @@ Blog endpoints
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Header
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.blog import BlogPost, BlogPostLike
@@ -39,7 +40,10 @@ async def get_blog_posts(
     """Get all blog posts with pagination"""
     offset = (page - 1) * limit
     
-    query = db.query(BlogPost)
+    # Only get blog posts (post_type="blog" or NULL for backward compatibility)
+    query = db.query(BlogPost).filter(
+        or_(BlogPost.post_type == "blog", BlogPost.post_type.is_(None))
+    )
     
     # Filter by status (unless specifically asking for all, mainly for admin later)
     if status_filter != "all":
@@ -141,6 +145,7 @@ async def create_blog_post(
         category=post_data.category,
         image_url=post_data.image_url,
         status="pending",
+        post_type="blog",  # Mark as blog post
         author_id=user_id,
     )
     
