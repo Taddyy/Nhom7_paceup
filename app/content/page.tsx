@@ -1,36 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import CTASection from '@/components/home/CTASection'
 import ContentHighlightsSection, {
   type ArticleHighlight,
   type ContentHighlight
 } from '@/components/home/ContentHighlightsSection'
 import { getContentPosts, type ContentPost } from '@/lib/api/content-service'
-
-const DEFAULT_POSTS: ContentHighlight[] = [
-  {
-    id: 'post-1',
-    title: 'Chinh phục cung đường Techcombank Marathon',
-    author: 'PaceUp Studio',
-    date: '02 Tháng 11, 2025',
-    summary:
-      'Khám phá các bí quyết giữ pace ổn định và chiến thuật tiếp nước giúp bạn hoàn thành 42km với kết quả tốt nhất.',
-    image: 'http://localhost:3845/assets/758e40716c21136fbea225c08347430dea16d070.png'
-  },
-  {
-    id: 'post-2',
-    title: 'Trải nghiệm Night Run Đà Nẵng',
-    author: 'Run To The Light',
-    date: '17 Tháng 10, 2025',
-    summary:
-      'Ánh sáng LED tương tác trên cầu Rồng, cung đường ven sông Hàn rực rỡ mang tới trải nghiệm chạy bộ độc nhất.',
-    image: 'http://localhost:3845/assets/7045ae395d136850870676a9ff83680f1efe4585.png'
-  }
-]
-
-const DEFAULT_ARTICLES: ArticleHighlight[] = []
 
 const mapContentPostToArticle = (post: ContentPost): ArticleHighlight => {
   // Extract plain text from HTML content for caption
@@ -96,8 +72,8 @@ const mapContentPostToHighlight = (post: ContentPost): ContentHighlight => {
 }
 
 export default function ContentPage() {
-  const [posts, setPosts] = useState<ContentHighlight[]>(DEFAULT_POSTS)
-  const [articles, setArticles] = useState<ArticleHighlight[]>(DEFAULT_ARTICLES)
+  const [posts, setPosts] = useState<ContentHighlight[]>([])
+  const [articles, setArticles] = useState<ArticleHighlight[]>([])
   const [isFetchingPosts, setIsFetchingPosts] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -115,15 +91,14 @@ export default function ContentPage() {
       try {
         setIsFetchingPosts(true)
         const response = await getContentPosts(1, 100) // Fetch more for articles
-        if (response.posts.length > 0) {
-          setPosts(response.posts.map(mapContentPostToHighlight))
-          // Map content posts to articles
-          setArticles(response.posts.map(mapContentPostToArticle))
-        }
+        // Luôn set data từ API, kể cả khi empty array
+        setPosts(response.posts.map(mapContentPostToHighlight))
+        setArticles(response.posts.map(mapContentPostToArticle))
       } catch (error) {
         console.error('Failed to load content posts:', error)
-        setPosts(DEFAULT_POSTS)
-        setArticles(DEFAULT_ARTICLES)
+        // Không fallback về hardcoded data, để empty arrays
+        setPosts([])
+        setArticles([])
       } finally {
         setIsFetchingPosts(false)
       }
