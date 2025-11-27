@@ -10,6 +10,7 @@ import { getCurrentUser, type User } from '@/lib/api/auth-service'
 import RichTextEditor from '@/components/ui/RichTextEditor'
 import DropdownMenu, { type DropdownOption } from '@/components/ui/DropdownMenu'
 import CustomSelect, { type SelectOption } from '@/components/ui/CustomSelect'
+import NotificationDialog from '@/components/ui/NotificationDialog'
 
 export interface ContentHighlight {
   id: string
@@ -413,6 +414,23 @@ const ArticleCard = ({
   const [reportDescription, setReportDescription] = useState('')
   const reportRef = useRef<HTMLDivElement>(null)
   
+  // Notification dialog states
+  const [notificationDialog, setNotificationDialog] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    type: 'default' | 'negative'
+    confirmLabel?: string
+    cancelLabel?: string
+    onConfirm: () => void
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'default',
+    onConfirm: () => {}
+  })
+  
   // Check if current user is the owner
   const isOwner = currentUser && article.author_id && currentUser.id === article.author_id
   
@@ -651,11 +669,25 @@ const ArticleCard = ({
       setIsReportOpen(false)
       setReportReasons([])
       setReportDescription('')
-      // Show success message
-      alert('Báo cáo đã được gửi thành công!')
+      // Show success notification
+      setNotificationDialog({
+        isOpen: true,
+        title: 'Thành công',
+        message: 'Báo cáo đã được gửi thành công!',
+        type: 'default',
+        confirmLabel: 'Đóng',
+        onConfirm: () => setNotificationDialog(prev => ({ ...prev, isOpen: false }))
+      })
     } catch (error: any) {
       console.error('Failed to submit report:', error)
-      alert(error?.response?.data?.detail || 'Lỗi khi gửi báo cáo. Vui lòng thử lại.')
+      setNotificationDialog({
+        isOpen: true,
+        title: 'Lỗi',
+        message: error?.response?.data?.detail || 'Lỗi khi gửi báo cáo. Vui lòng thử lại.',
+        type: 'default',
+        confirmLabel: 'Đóng',
+        onConfirm: () => setNotificationDialog(prev => ({ ...prev, isOpen: false }))
+      })
     }
   }
 
@@ -710,12 +742,26 @@ const ArticleCard = ({
   
   const handleSaveEdit = async () => {
     if (!article.content_post_id) {
-      alert('Không thể chỉnh sửa bài viết này.')
+      setNotificationDialog({
+        isOpen: true,
+        title: 'Lỗi',
+        message: 'Không thể chỉnh sửa bài viết này.',
+        type: 'default',
+        confirmLabel: 'Đóng',
+        onConfirm: () => setNotificationDialog(prev => ({ ...prev, isOpen: false }))
+      })
       return
     }
     
     if (!editTitle.trim() && !editCaption.trim() && editMedia.length === 0) {
-      alert('Vui lòng nhập nội dung hoặc thêm ảnh/video/GIF.')
+      setNotificationDialog({
+        isOpen: true,
+        title: 'Thông báo',
+        message: 'Vui lòng nhập nội dung hoặc thêm ảnh/video/GIF.',
+        type: 'default',
+        confirmLabel: 'Đóng',
+        onConfirm: () => setNotificationDialog(prev => ({ ...prev, isOpen: false }))
+      })
       return
     }
     
@@ -811,39 +857,83 @@ const ArticleCard = ({
       }
       
       setIsEditMode(false)
-      alert('Bài viết đã được cập nhật thành công!')
+      setNotificationDialog({
+        isOpen: true,
+        title: 'Thành công',
+        message: 'Bài viết đã được cập nhật thành công!',
+        type: 'default',
+        confirmLabel: 'Đóng',
+        onConfirm: () => setNotificationDialog(prev => ({ ...prev, isOpen: false }))
+      })
     } catch (error: any) {
       console.error('Error updating post:', error)
-      alert(error?.response?.data?.detail || error?.message || 'Có lỗi xảy ra khi cập nhật bài viết.')
+      setNotificationDialog({
+        isOpen: true,
+        title: 'Lỗi',
+        message: error?.response?.data?.detail || error?.message || 'Có lỗi xảy ra khi cập nhật bài viết.',
+        type: 'default',
+        confirmLabel: 'Đóng',
+        onConfirm: () => setNotificationDialog(prev => ({ ...prev, isOpen: false }))
+      })
     } finally {
       setIsSaving(false)
     }
   }
   
-  const handleDeletePost = async () => {
+  const handleDeletePost = () => {
     if (!article.content_post_id) {
-      alert('Không thể xóa bài viết này.')
+      setNotificationDialog({
+        isOpen: true,
+        title: 'Lỗi',
+        message: 'Không thể xóa bài viết này.',
+        type: 'default',
+        confirmLabel: 'Đóng',
+        onConfirm: () => setNotificationDialog(prev => ({ ...prev, isOpen: false }))
+      })
       return
     }
     
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.')) {
-      return
-    }
-    
-    try {
-      setIsDeleting(true)
-      await deleteContentPost(article.content_post_id)
-      
-      if (onArticleDeleted) {
-        onArticleDeleted(article.id)
+    // Show confirmation dialog with negative type (red button)
+    setNotificationDialog({
+      isOpen: true,
+      title: 'Xác nhận xóa',
+      message: 'Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.',
+      type: 'negative',
+      confirmLabel: 'Xóa',
+      cancelLabel: 'Hủy',
+      onConfirm: async () => {
+        setNotificationDialog(prev => ({ ...prev, isOpen: false }))
+        try {
+          setIsDeleting(true)
+          await deleteContentPost(article.content_post_id)
+          
+          if (onArticleDeleted) {
+            onArticleDeleted(article.id)
+          }
+          
+          // Show success notification
+          setNotificationDialog({
+            isOpen: true,
+            title: 'Thành công',
+            message: 'Bài viết đã được xóa thành công!',
+            type: 'default',
+            confirmLabel: 'Đóng',
+            onConfirm: () => setNotificationDialog(prev => ({ ...prev, isOpen: false }))
+          })
+        } catch (error: any) {
+          console.error('Error deleting post:', error)
+          setNotificationDialog({
+            isOpen: true,
+            title: 'Lỗi',
+            message: error?.response?.data?.detail || error?.message || 'Có lỗi xảy ra khi xóa bài viết.',
+            type: 'default',
+            confirmLabel: 'Đóng',
+            onConfirm: () => setNotificationDialog(prev => ({ ...prev, isOpen: false }))
+          })
+          setIsDeleting(false)
+        }
       }
-      
-      alert('Bài viết đã được xóa thành công!')
-    } catch (error: any) {
-      console.error('Error deleting post:', error)
-      alert(error?.response?.data?.detail || error?.message || 'Có lỗi xảy ra khi xóa bài viết.')
-      setIsDeleting(false)
-    }
+    })
   }
   
   const handleEditMediaChange = (event: ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
@@ -1572,6 +1662,18 @@ const ArticleCard = ({
         </div>
       </form>
       )}
+      
+      {/* Notification Dialog */}
+      <NotificationDialog
+        isOpen={notificationDialog.isOpen}
+        title={notificationDialog.title}
+        message={notificationDialog.message}
+        type={notificationDialog.type}
+        confirmLabel={notificationDialog.confirmLabel}
+        cancelLabel={notificationDialog.cancelLabel}
+        onConfirm={notificationDialog.onConfirm}
+        onCancel={() => setNotificationDialog(prev => ({ ...prev, isOpen: false }))}
+      />
     </article>
   )
 }

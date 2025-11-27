@@ -13,6 +13,10 @@ import Toast from '@/components/ui/Toast'
 import Cropper, { Area } from 'react-easy-crop'
 import getCroppedImg from '@/lib/utils/cropImage'
 import CustomSelect from '@/components/ui/CustomSelect'
+import ContentHighlightsSection, {
+  type ArticleHighlight
+} from '@/components/home/ContentHighlightsSection'
+import NotificationDialog from '@/components/ui/NotificationDialog'
 
 const INPUT_CLASS =
   'h-[56px] w-full rounded-[12px] border border-black/20 px-5 text-base text-[#1c1c1c] placeholder-black/40 focus:border-black focus:ring-2 focus:ring-black/15 focus:outline-none transition-all'
@@ -52,6 +56,23 @@ export default function ProfilePage() {
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const [isCropModalOpen, setIsCropModalOpen] = useState(false)
+  
+  // Notification dialog state
+  const [notificationDialog, setNotificationDialog] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    type: 'default' | 'negative'
+    confirmLabel?: string
+    cancelLabel?: string
+    onConfirm: () => void
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'default',
+    onConfirm: () => {}
+  })
 
   useEffect(() => {
     fetchUserData()
@@ -99,6 +120,80 @@ export default function ProfilePage() {
     }
   }
 
+  // Map ContentPost to ArticleHighlight (same as in /content/page.tsx)
+  const mapContentPostToArticle = (post: ContentPost): ArticleHighlight => {
+    // Extract plain text from HTML content for caption
+    const plainText = (post.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    const caption = plainText.length > 200 ? `${plainText.slice(0, 200)}…` : plainText || ''
+    
+    // Extract media URLs from HTML content (img and video tags)
+    const media: string[] = []
+    
+    // Extract img src URLs (for GIFs and images)
+    const imgMatches = (post.content || '').match(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi)
+    if (imgMatches) {
+      imgMatches.forEach((imgTag) => {
+        const srcMatch = imgTag.match(/src=["']([^"']+)["']/i)
+        if (srcMatch && srcMatch[1]) {
+          media.push(srcMatch[1])
+        }
+      })
+    }
+    
+    // Extract video src URLs
+    const videoMatches = (post.content || '').match(/<video[^>]+src=["']([^"']+)["'][^>]*>/gi)
+    if (videoMatches) {
+      videoMatches.forEach((videoTag) => {
+        const srcMatch = videoTag.match(/src=["']([^"']+)["']/i)
+        if (srcMatch && srcMatch[1]) {
+          media.push(srcMatch[1])
+        }
+      })
+    }
+    
+    // Fallback to image_url if no media found in content
+    if (media.length === 0 && post.image_url) {
+      media.push(post.image_url)
+    }
+    
+    // Format timestamp
+    const createdAt = new Date(post.created_at)
+    const now = new Date()
+    const diffMs = now.getTime() - createdAt.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+    
+    let timestamp = 'Vừa xong'
+    if (diffMins > 0 && diffMins < 60) {
+      timestamp = `${diffMins} phút trước`
+    } else if (diffHours > 0 && diffHours < 24) {
+      timestamp = `${diffHours} giờ trước`
+    } else if (diffDays > 0 && diffDays < 7) {
+      timestamp = `${diffDays} ngày trước`
+    } else {
+      timestamp = createdAt.toLocaleDateString('vi-VN')
+    }
+    
+    // Extract handle from email or use default
+    const handle = post.author_name ? `@${post.author_name.toLowerCase().replace(/\s+/g, '')}` : '@user'
+    
+    return {
+      id: post.id,
+      author: post.author_name || 'PaceUp Studio',
+      handle,
+      avatar: post.author_avatar || '/Image/Run 1.png',
+      timestamp,
+      title: post.title,
+      caption,
+      media,
+      comments: [],
+      likes: post.likes_count || 0,
+      author_id: post.author_id,
+      content_post_id: post.id
+    }
+  }
+
   const fetchMyPosts = async () => {
     try {
       if (!user?.id) return
@@ -109,18 +204,26 @@ export default function ProfilePage() {
     }
   }
 
-  const handleDeleteContentPost = async (postId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xoá bài viết này?')) {
-      return
-    }
-    try {
-      await deleteContentPost(postId)
-      setMyContentPosts(prev => prev.filter(post => post.id !== postId))
-      setToast({ message: 'Đã xoá bài viết thành công.', type: 'success', isVisible: true })
-    } catch (error) {
-      console.error('Error deleting content post:', error)
-      setToast({ message: 'Không thể xoá bài viết. Vui lòng thử lại.', type: 'error', isVisible: true })
-    }
+  const handleDeleteContentPost = (postId: string) => {
+    setNotificationDialog({
+      isOpen: true,
+      title: 'Xác nhận xóa',
+      message: 'Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.',
+      type: 'negative',
+      confirmLabel: 'Xóa',
+      cancelLabel: 'Hủy',
+      onConfirm: async () => {
+        setNotificationDialog(prev => ({ ...prev, isOpen: false }))
+        try {
+          await deleteContentPost(postId)
+          setMyContentPosts(prev => prev.filter(post => post.id !== postId))
+          setToast({ message: 'Đã xoá bài viết thành công.', type: 'success', isVisible: true })
+        } catch (error) {
+          console.error('Error deleting content post:', error)
+          setToast({ message: 'Không thể xoá bài viết. Vui lòng thử lại.', type: 'error', isVisible: true })
+        }
+      }
+    })
   }
 
   const handleDeleteBlog = async (postId: string) => {
@@ -529,63 +632,19 @@ export default function ProfilePage() {
           )}
 
           {activeTab === 'articles' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="w-full">
               {myContentPosts.length > 0 ? (
-                myContentPosts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="flex flex-col gap-4 group border border-gray-100 rounded-xl p-3 hover:shadow-md transition-shadow bg-white"
-                  >
-                    <Link
-                      href={`/content`}
-                      className="relative h-[220px] w-full rounded-lg overflow-hidden"
-                    >
-                      <Image
-                        src={post.image_url || '/Image/Event.png'}
-                        alt={post.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition duration-300"
-                      />
-                    </Link>
-                    <div className="flex-1 flex flex-col gap-2">
-                      <h3 className="font-bold text-xl group-hover:text-blue-600 transition line-clamp-2">
-                        {post.title}
-                      </h3>
-                      <p className="text-gray-600 text-sm line-clamp-2">
-                        {post.excerpt || post.content?.replace(/<[^>]+>/g, ' ').substring(0, 150)}
-                      </p>
-                      <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
-                        <span>{new Date(post.created_at).toLocaleDateString('vi-VN')}</span>
-                        <span className="text-green-600 font-medium">Đã duyệt</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-end pt-1">
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteContentPost(post.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={1.5}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M6 7h12M10 11v6m4-6v6M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1zM5 7h14l-1 12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7z"
-                          />
-                        </svg>
-                        Xoá bài viết
-                      </button>
-                    </div>
-                  </div>
-                ))
+                <ContentHighlightsSection
+                  posts={[]} // Không cần highlights cho profile
+                  articles={myContentPosts.map(mapContentPostToArticle)}
+                  showCreateButton={false}
+                  onArticleDeleted={(articleId) => {
+                    // Remove deleted article from list
+                    setMyContentPosts(prev => prev.filter(post => post.id !== articleId))
+                  }}
+                />
               ) : (
-                <p className="col-span-full text-center text-gray-500 py-10">
+                <p className="text-center text-gray-500 py-10">
                   Bạn chưa có bài viết nào.
                 </p>
               )}
@@ -707,6 +766,18 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+      
+      {/* Notification Dialog */}
+      <NotificationDialog
+        isOpen={notificationDialog.isOpen}
+        title={notificationDialog.title}
+        message={notificationDialog.message}
+        type={notificationDialog.type}
+        confirmLabel={notificationDialog.confirmLabel}
+        cancelLabel={notificationDialog.cancelLabel}
+        onConfirm={notificationDialog.onConfirm}
+        onCancel={() => setNotificationDialog(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   )
 }
