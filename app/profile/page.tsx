@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getCurrentUser, updateProfile, getJoinedEvents, logout, type UserUpdate, type User } from '@/lib/api/auth-service'
 import { deleteBlogPost, getBlogPosts, type BlogPost } from '@/lib/api/blog-service'
+import { getContentPosts, deleteContentPost, type ContentPost } from '@/lib/api/content-service'
 import { getEvents, type Event } from '@/lib/api/events'
 import EventCard from '@/components/events/EventCard'
 import Toast from '@/components/ui/Toast'
@@ -35,6 +36,7 @@ export default function ProfilePage() {
   
   // Data states
   const [myPosts, setMyPosts] = useState<BlogPost[]>([])
+  const [myContentPosts, setMyContentPosts] = useState<ContentPost[]>([])
   const [joinedEvents, setJoinedEvents] = useState<Event[]>([])
   const [createdEvents, setCreatedEvents] = useState<Event[]>([])
 
@@ -57,6 +59,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user?.id) {
+      if (activeTab === 'articles') fetchMyContentPosts()
       if (activeTab === 'blogs') fetchMyPosts()
       if (activeTab === 'events_joined') fetchJoinedEvents()
       if (activeTab === 'events_created') fetchCreatedEvents()
@@ -86,6 +89,16 @@ export default function ProfilePage() {
     }
   }
 
+  const fetchMyContentPosts = async () => {
+    try {
+      if (!user?.id) return
+      const res = await getContentPosts(1, 100, user.id)
+      setMyContentPosts(res.posts)
+    } catch (error) {
+      console.error('Error fetching content posts:', error)
+    }
+  }
+
   const fetchMyPosts = async () => {
     try {
       if (!user?.id) return
@@ -93,6 +106,20 @@ export default function ProfilePage() {
       setMyPosts(res.posts)
     } catch (error) {
       console.error('Error fetching posts:', error)
+    }
+  }
+
+  const handleDeleteContentPost = async (postId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xoá bài viết này?')) {
+      return
+    }
+    try {
+      await deleteContentPost(postId)
+      setMyContentPosts(prev => prev.filter(post => post.id !== postId))
+      setToast({ message: 'Đã xoá bài viết thành công.', type: 'success', isVisible: true })
+    } catch (error) {
+      console.error('Error deleting content post:', error)
+      setToast({ message: 'Không thể xoá bài viết. Vui lòng thử lại.', type: 'error', isVisible: true })
     }
   }
 
@@ -187,86 +214,51 @@ export default function ProfilePage() {
       
       setIsSaving(true)
       
-      let croppedImageBlob: Blob | null = null
-      let uploadAttempts = 0
-      const maxUploadAttempts = 3
+      // Step 1: Crop image (no compression - Cloudinary handles optimization)
+      const croppedImageBlob = await getCroppedImg(
+        imageSrc,
+        croppedAreaPixels,
+        0, // rotation
+        { horizontal: false, vertical: false } // flip
+      )
+
+      if (!croppedImageBlob) {
+        throw new Error('Không thể xử lý ảnh. Vui lòng thử lại.')
+      }
+
+      // Log file size for debugging
+      const fileSizeKB = Math.round(croppedImageBlob.size / 1024)
+      console.log(`Avatar image size: ${fileSizeKB}KB`)
+
+      // Create form data to upload
+      const formData = new FormData()
+      formData.append('file', croppedImageBlob, 'avatar.jpg')
+
+      // Step 2: Upload to API (Cloudinary handles optimization)
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.error || errorData.message || 'Upload failed'
+        throw new Error(errorMessage)
+      }
+
+      const data = await response.json()
       
-      // Retry loop: compress and upload, retry with more aggressive compression if needed
-      while (uploadAttempts < maxUploadAttempts) {
-        uploadAttempts++
-        
-        try {
-          // Step 1: Crop and compress image
-          // On retry, use forceSmaller flag for more aggressive compression
-          croppedImageBlob = await getCroppedImg(
-            imageSrc,
-            croppedAreaPixels,
-            0, // rotation
-            { horizontal: false, vertical: false }, // flip
-            uploadAttempts > 1 // forceSmaller on retry
-          )
-
-          if (!croppedImageBlob) {
-            // This should never happen with improved compression, but handle it gracefully
-            throw new Error('Không thể xử lý ảnh. Vui lòng thử lại.')
-          }
-
-          // Log compression info for debugging
-          const fileSizeKB = Math.round(croppedImageBlob.size / 1024)
-          console.log(`Upload attempt ${uploadAttempts}: Image compressed to ${fileSizeKB}KB`)
-
-          // Create form data to upload
-          const formData = new FormData()
-          formData.append('file', croppedImageBlob, 'avatar.jpg')
-
-          // Step 2: Upload to API
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-          })
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            const errorMessage = errorData.error || errorData.message || 'Upload failed'
-            
-            // If error indicates we should retry (size error with retry flag) and we have retries left
-            if ((errorMessage.includes('quá lớn') || errorData.retry) && uploadAttempts < maxUploadAttempts) {
-              console.log(`Upload failed due to size, retrying with more aggressive compression (attempt ${uploadAttempts + 1}/${maxUploadAttempts})`)
-              // Wait a bit before retrying to allow UI to update
-              await new Promise(resolve => setTimeout(resolve, 100))
-              // Continue to retry with forceSmaller flag
-              continue
-            }
-            
-            throw new Error(errorMessage)
-          }
-
-          const data = await response.json()
-          
-          if (!data.url) {
-            throw new Error('No image URL returned from upload')
-          }
-          
-          // Step 3: Update profile with new avatar URL
-          await updateProfile({ avatar: data.url })
-          window.dispatchEvent(new Event('user:updated'))
-          
-          setToast({ message: 'Cập nhật ảnh đại diện thành công!', type: 'success', isVisible: true })
-          setIsCropModalOpen(false)
-          fetchUserData()
-          return // Success, exit retry loop
-          
-        } catch (uploadError: any) {
-          // If this is not a size error or we're out of retries, throw immediately
-          if (!uploadError.message?.includes('quá lớn') || uploadAttempts >= maxUploadAttempts) {
-            throw uploadError
-          }
-          // Otherwise, continue retry loop
-        }
+      if (!data.url) {
+        throw new Error('No image URL returned from upload')
       }
       
-      // Should never reach here, but just in case
-      throw new Error('Không thể upload ảnh sau nhiều lần thử.')
+      // Step 3: Update profile with new avatar URL
+      await updateProfile({ avatar: data.url })
+      window.dispatchEvent(new Event('user:updated'))
+      
+      setToast({ message: 'Cập nhật ảnh đại diện thành công!', type: 'success', isVisible: true })
+      setIsCropModalOpen(false)
+      fetchUserData()
       
     } catch (e: any) {
       console.error('Upload error:', e)
@@ -537,11 +529,66 @@ export default function ProfilePage() {
           )}
 
           {activeTab === 'articles' && (
-            <div className="flex items-center justify-center py-10">
-              <p className="text-gray-500 text-center max-w-xl">
-                Tính năng lưu trữ <span className="font-semibold">bài viết</span> đang được phát triển. 
-                Trong tương lai, các bài đăng bạn tạo ở mục <span className="font-semibold">Nội dung</span> sẽ xuất hiện tại đây.
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {myContentPosts.length > 0 ? (
+                myContentPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="flex flex-col gap-4 group border border-gray-100 rounded-xl p-3 hover:shadow-md transition-shadow bg-white"
+                  >
+                    <Link
+                      href={`/content`}
+                      className="relative h-[220px] w-full rounded-lg overflow-hidden"
+                    >
+                      <Image
+                        src={post.image_url || '/Image/Event.png'}
+                        alt={post.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition duration-300"
+                      />
+                    </Link>
+                    <div className="flex-1 flex flex-col gap-2">
+                      <h3 className="font-bold text-xl group-hover:text-blue-600 transition line-clamp-2">
+                        {post.title}
+                      </h3>
+                      <p className="text-gray-600 text-sm line-clamp-2">
+                        {post.excerpt || post.content?.replace(/<[^>]+>/g, ' ').substring(0, 150)}
+                      </p>
+                      <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+                        <span>{new Date(post.created_at).toLocaleDateString('vi-VN')}</span>
+                        <span className="text-green-600 font-medium">Đã duyệt</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteContentPost(post.id)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M6 7h12M10 11v6m4-6v6M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1zM5 7h14l-1 12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7z"
+                          />
+                        </svg>
+                        Xoá bài viết
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="col-span-full text-center text-gray-500 py-10">
+                  Bạn chưa có bài viết nào.
+                </p>
+              )}
             </div>
           )}
 
