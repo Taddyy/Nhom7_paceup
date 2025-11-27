@@ -21,6 +21,8 @@ export interface NotificationDialogProps {
   onCancel: () => void
   /** Whether to show close button */
   showCloseButton?: boolean
+  /** Auto close after specified milliseconds (default: 3000 for success, no auto-close for negative) */
+  autoCloseDelay?: number
 }
 
 /**
@@ -43,8 +45,28 @@ export default function NotificationDialog({
   cancelLabel,
   onConfirm,
   onCancel,
-  showCloseButton = true
+  showCloseButton = true,
+  autoCloseDelay
 }: NotificationDialogProps) {
+  // Auto-close for success notifications (type='default' and no cancel button)
+  useEffect(() => {
+    if (!isOpen) return
+    
+    // Auto-close only for default type (success) and when no cancel button
+    // Use provided autoCloseDelay or default 3000ms for success, no auto-close for negative
+    const delay = autoCloseDelay !== undefined 
+      ? autoCloseDelay 
+      : (type === 'default' && !cancelLabel ? 3000 : undefined)
+    
+    if (delay) {
+      const timer = setTimeout(() => {
+        onConfirm() // Auto-close by calling onConfirm (which typically closes the dialog)
+      }, delay)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen, type, cancelLabel, autoCloseDelay, onConfirm])
+
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return
@@ -110,12 +132,12 @@ export default function NotificationDialog({
         {/* Content */}
         <div className="flex flex-col gap-4">
           {/* Title */}
-          <h3 className="pr-8 text-xl font-semibold" style={{ color: '#dc2626' }}>
+          <h3 className="pr-8 text-xl font-semibold" style={{ color: type === 'default' ? '#1c1c1c' : '#dc2626' }}>
             {title}
           </h3>
 
           {/* Message */}
-          <p className="text-base leading-relaxed" style={{ color: '#dc2626' }}>
+          <p className="text-base leading-relaxed" style={{ color: type === 'default' ? '#1c1c1c' : '#dc2626' }}>
             {message}
           </p>
 
