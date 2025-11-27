@@ -226,18 +226,26 @@ export default function ProfilePage() {
     })
   }
 
-  const handleDeleteBlog = async (postId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xoá blog này?')) {
-      return
-    }
-    try {
-      await deleteBlogPost(postId)
-      setMyPosts(prev => prev.filter(post => post.id !== postId))
-      setToast({ message: 'Đã xoá blog thành công.', type: 'success', isVisible: true })
-    } catch (error) {
-      console.error('Error deleting blog post:', error)
-      setToast({ message: 'Không thể xoá blog. Vui lòng thử lại.', type: 'error', isVisible: true })
-    }
+  const handleDeleteBlog = (postId: string) => {
+    setNotificationDialog({
+      isOpen: true,
+      title: 'Xác nhận xóa blog',
+      message: 'Bạn có chắc chắn muốn xoá blog này?',
+      type: 'negative',
+      confirmLabel: 'Xóa',
+      cancelLabel: 'Hủy',
+      onConfirm: async () => {
+        setNotificationDialog(prev => ({ ...prev, isOpen: false }))
+        try {
+          await deleteBlogPost(postId)
+          setMyPosts(prev => prev.filter(post => post.id !== postId))
+          setToast({ message: 'Đã xoá blog thành công.', type: 'success', isVisible: true })
+        } catch (error) {
+          console.error('Error deleting blog post:', error)
+          setToast({ message: 'Không thể xoá blog. Vui lòng thử lại.', type: 'error', isVisible: true })
+        }
+      }
+    })
   }
 
   const fetchJoinedEvents = async () => {
