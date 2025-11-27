@@ -660,6 +660,144 @@ const ArticleCard = ({
   const handleUnhidePost = () => {
     setIsHidden(false)
   }
+  
+  const handleEditPost = () => {
+    setIsEditMode(true)
+    setEditTitle(article.title)
+    setEditCaption(article.caption)
+    setEditMedia(article.media.map((url, idx) => ({ id: `media-${idx}`, type: 'image' as const, url })))
+  }
+  
+  const handleCancelEdit = () => {
+    setIsEditMode(false)
+    setEditTitle(article.title)
+    setEditCaption(article.caption)
+    setEditMedia(article.media.map((url, idx) => ({ id: `media-${idx}`, type: 'image' as const, url })))
+  }
+  
+  const handleSaveEdit = async () => {
+    if (!article.content_post_id) {
+      alert('Không thể chỉnh sửa bài viết này.')
+      return
+    }
+    
+    if (!editTitle.trim() && !editCaption.trim() && editMedia.length === 0) {
+      alert('Vui lòng nhập nội dung hoặc thêm ảnh/video.')
+      return
+    }
+    
+    try {
+      setIsSaving(true)
+      
+      // Upload first image if available (for image_url)
+      let imageUrl: string | undefined = undefined
+      const firstImage = editMedia.find(m => m.type === 'image' && m.file)
+      if (firstImage?.file) {
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', firstImage.file)
+        try {
+          const uploadResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: uploadFormData,
+          })
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json()
+            imageUrl = uploadData.url
+          }
+        } catch (uploadError) {
+          console.error('Error uploading image:', uploadError)
+        }
+      } else if (editMedia.length > 0 && editMedia[0].type === 'image') {
+        // Use existing image URL if no new file
+        imageUrl = editMedia[0].url
+      }
+      
+      // Convert caption to HTML content
+      const htmlContent = editCaption.trim().split('\n').map(line => `<p>${line}</p>`).join('') || `<p>${editTitle}</p>`
+      
+      // Update content post via API
+      const updatedPost = await updateContentPost(article.content_post_id, {
+        title: editTitle.trim() || 'Bài viết mới',
+        content: htmlContent,
+        category: 'general',
+        image_url: imageUrl
+      })
+      
+      // Update local article
+      const updatedArticle: ArticleHighlight = {
+        ...article,
+        title: updatedPost.title,
+        caption: editCaption.trim(),
+        media: editMedia.map(m => m.url),
+        content_post_id: updatedPost.id
+      }
+      
+      if (onArticleUpdated) {
+        onArticleUpdated(updatedArticle)
+      }
+      
+      setIsEditMode(false)
+      alert('Bài viết đã được cập nhật thành công!')
+    } catch (error: any) {
+      console.error('Error updating post:', error)
+      alert(error?.response?.data?.detail || error?.message || 'Có lỗi xảy ra khi cập nhật bài viết.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+  
+  const handleDeletePost = async () => {
+    if (!article.content_post_id) {
+      alert('Không thể xóa bài viết này.')
+      return
+    }
+    
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.')) {
+      return
+    }
+    
+    try {
+      setIsDeleting(true)
+      await deleteContentPost(article.content_post_id)
+      
+      if (onArticleDeleted) {
+        onArticleDeleted(article.id)
+      }
+      
+      alert('Bài viết đã được xóa thành công!')
+    } catch (error: any) {
+      console.error('Error deleting post:', error)
+      alert(error?.response?.data?.detail || error?.message || 'Có lỗi xảy ra khi xóa bài viết.')
+      setIsDeleting(false)
+    }
+  }
+  
+  const handleEditMediaChange = (event: ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+    
+    Array.from(files).forEach((file) => {
+      const objectUrl = URL.createObjectURL(file)
+      setEditMedia(prev => [...prev, {
+        id: generateId(),
+        type,
+        url: objectUrl,
+        preview: objectUrl,
+        file: file
+      }])
+    })
+    event.target.value = ''
+  }
+  
+  const removeEditMedia = (id: string) => {
+    setEditMedia(prev => {
+      const item = prev.find(m => m.id === id)
+      if (item && item.url.startsWith('blob:')) {
+        URL.revokeObjectURL(item.url)
+      }
+      return prev.filter(m => m.id !== id)
+    })
+  }
 
   const hasTitleOrCaption = (article.title && article.title.trim()) || (article.caption && article.caption.trim())
   const hasMedia = limitedMedia.length > 0
