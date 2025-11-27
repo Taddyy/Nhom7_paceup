@@ -171,12 +171,12 @@ export default function RegisterPage() {
       <div className="flex min-h-screen flex-col lg:flex-row">
         {/* Mobile hero */}
         <div className="relative h-[280px] w-full overflow-hidden bg-black lg:hidden">
-          <Image src={HERO_IMAGE} alt="Runner preparing for a race" fill className="object-cover" priority />
+          <Image src={HERO_IMAGE} alt="Runner preparing for a race" fill className="object-cover object-top" priority />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
         </div>
         {/* Hero panel */}
         <div className="relative hidden min-h-screen w-full max-w-[640px] flex-shrink-0 overflow-hidden bg-black lg:block">
-          <Image src={HERO_IMAGE} alt="Runner preparing for a race" fill className="object-cover" priority />
+          <Image src={HERO_IMAGE} alt="Runner preparing for a race" fill className="object-cover object-top" priority />
           <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/0 to-black/70" />
 
           <div className="absolute bottom-16 left-1/2 w-[85%] max-w-[480px] -translate-x-1/2 rounded-[24px] border border-white/30 bg-white/60 p-6 backdrop-blur-[18px]">
