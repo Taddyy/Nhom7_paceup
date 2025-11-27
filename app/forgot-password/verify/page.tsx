@@ -123,7 +123,7 @@ function VerifyResetCodePageInner() {
           <button
             type="submit"
             disabled={isSubmitting || code.length !== OTP_LENGTH}
-            className="mt-2 h-[52px] w-full rounded-[12px] bg-[#1c1c1c] text-sm font-medium uppercase tracking-[0.2em] text-white shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.4),inset_4px_4px_16px_rgba(255,255,255,0.3)] disabled:opacity-60"
+            className="mt-2 h-[52px] w-full rounded-[12px] bg-[#1c1c1c] text-sm font-medium uppercase tracking-[0.2em] text-white btn-inner-shadow disabled:opacity-60"
           >
             {isSubmitting ? 'Đang kiểm tra...' : 'Tiếp tục'}
           </button>

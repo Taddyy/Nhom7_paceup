@@ -179,7 +179,7 @@ export default function HeroSection() {
               <button
                 type="button"
                 onClick={handleSearch}
-                className="bg-[#0b0b0b] border border-[rgba(182,182,182,0.1)] rounded-[12px] h-[50px] w-[54px] flex items-center justify-center hover:bg-[#1c1c1c] transition-colors"
+                className="bg-[#0b0b0b] border border-[rgba(182,182,182,0.1)] rounded-[12px] h-[50px] w-[54px] flex items-center justify-center hover:bg-[#1c1c1c] transition-colors btn-inner-shadow"
                 aria-label="Tìm sự kiện"
               >
                 <svg className="w-[10.059px] h-[17.244px]" viewBox="0 0 10 17" fill="none">

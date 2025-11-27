@@ -73,7 +73,7 @@ export default function ForgotPasswordPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="h-[52px] w-full rounded-[12px] bg-[#1c1c1c] text-sm font-semibold uppercase tracking-[0.18em] text-white shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.4),inset_4px_4px_12px_rgba(255,255,255,0.25)] disabled:opacity-60"
+            className="h-[52px] w-full rounded-[12px] bg-[#1c1c1c] text-sm font-semibold uppercase tracking-[0.18em] text-white btn-inner-shadow disabled:opacity-60"
           >
             {isSubmitting ? 'Đang gửi mã...' : 'Gửi mã'}
           </button>

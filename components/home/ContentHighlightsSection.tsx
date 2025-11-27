@@ -1160,7 +1160,7 @@ const ArticleCard = ({
                 type="button"
                 onClick={handleSubmitReport}
                 disabled={reportReasons.length === 0}
-                className="flex-1 px-4 py-2 rounded-xl bg-[#1c1c1c] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                className="flex-1 px-4 py-2 rounded-xl bg-[#1c1c1c] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium btn-inner-shadow"
               >
                 Gửi báo cáo
               </button>
@@ -1237,7 +1237,7 @@ const ArticleCard = ({
                 />
                 <button
                   type="button"
-                  className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800"
+                  className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 btn-inner-shadow"
                   onClick={() => void handleEditGifSearch()}
                 >
                   Tìm
@@ -1322,7 +1322,7 @@ const ArticleCard = ({
               type="button"
               onClick={handleSaveEdit}
               disabled={isSaving || (!editTitle.trim() && !editCaption.trim() && editMedia.length === 0)}
-              className="flex-1 px-4 py-2 rounded-xl bg-[#1c1c1c] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              className="flex-1 px-4 py-2 rounded-xl bg-[#1c1c1c] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium btn-inner-shadow"
             >
               {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
             </button>
@@ -2283,7 +2283,7 @@ function ArticleComposer({
             <button
               type="submit"
               disabled={isSubmitting || (!caption.trim() && media.length === 0)}
-              className="bg-[#0b0b0b] border border-[rgba(182,182,182,0.1)] border-solid box-border content-stretch flex gap-[12px] h-[30px] items-center justify-center px-[16px] py-0 relative rounded-[4px] shrink-0 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-[#0b0b0b] border border-[rgba(182,182,182,0.1)] border-solid box-border content-stretch flex gap-[12px] h-[30px] items-center justify-center px-[16px] py-0 relative rounded-[4px] shrink-0 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed btn-inner-shadow"
               aria-label="Đăng bài"
             >
               <svg width="10" height="17" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2547,7 +2547,7 @@ function BlogComposer() {
           <button
             type="submit"
             disabled={isLoading || !title.trim() || !content.trim()}
-            className="px-6 py-2 rounded-xl bg-[#1c1c1c] text-white hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow-[inset_-2px_-2px_4px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.1)]"
+            className="px-6 py-2 rounded-xl bg-[#1c1c1c] text-white hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium btn-inner-shadow"
           >
             {isLoading ? 'Đang đăng...' : 'Đăng bài'}
           </button>

@@ -249,7 +249,7 @@ export default function CreateBlogPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="h-[56px] w-full rounded-[14px] bg-[#1c1c1c] px-8 text-sm font-semibold uppercase tracking-[0.3em] text-white shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.35),inset_4px_4px_8px_rgba(255,255,255,0.2)] transition hover:bg-[#0b0b0b] disabled:opacity-60 sm:w-auto"
+              className="h-[56px] w-full rounded-[14px] bg-[#1c1c1c] px-8 text-sm font-semibold uppercase tracking-[0.3em] text-white btn-inner-shadow transition hover:bg-[#0b0b0b] disabled:opacity-60 sm:w-auto"
             >
               {isLoading ? 'Đang đăng bài...' : 'Xuất bản bài viết'}
             </button>

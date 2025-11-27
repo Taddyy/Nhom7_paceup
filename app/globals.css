@@ -46,6 +46,11 @@ body {
     @apply bg-white border border-[#cbcbcb] rounded-[24px] p-4;
     box-shadow: inset -4px -4px 12px 0px rgba(132,132,132,0.25), inset 5px 4px 4px 0px rgba(255,255,255,0.25);
   }
+  
+  /* Inner shadow utility for buttons */
+  .btn-inner-shadow {
+    box-shadow: inset -4px -4px 4px 0px rgba(0,0,0,0.4), inset 4px 4px 6px 0px rgba(255,255,255,0.15);
+  }
 }
 
 /* Tiptap Editor Styles */

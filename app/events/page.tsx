@@ -262,7 +262,7 @@ function EventsPageInner() {
                 }}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                   activeTag === tag.label
-                    ? 'border-[#1c1c1c] bg-[#1c1c1c] text-white'
+                    ? 'border-[#1c1c1c] bg-[#1c1c1c] text-white btn-inner-shadow'
                     : 'border border-neutral-200 text-neutral-600 hover:bg-neutral-100'
                 }`}
               >

@@ -428,7 +428,7 @@ export default function AdminDashboard() {
             </div>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 mx-4 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2"
+              className="px-4 py-2 mx-4 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2 btn-inner-shadow"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -502,13 +502,13 @@ export default function AdminDashboard() {
                             </button>
                             <button 
                               onClick={() => handleApprovePost(post.id)}
-                              className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1 rounded"
+                              className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1 rounded btn-inner-shadow"
                             >
                               Duyệt
                             </button>
                             <button 
                               onClick={() => handleRejectPost(post.id)}
-                              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1 rounded"
+                              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1 rounded btn-inner-shadow"
                             >
                               Từ chối
                             </button>
@@ -567,13 +567,13 @@ export default function AdminDashboard() {
                             </button>
                             <button 
                               onClick={() => handleApproveEvent(event.id)}
-                              className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1 rounded"
+                              className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1 rounded btn-inner-shadow"
                             >
                               Duyệt
                             </button>
                             <button 
                               onClick={() => handleOpenRejectEventPopup(event.id)}
-                              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1 rounded"
+                              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1 rounded btn-inner-shadow"
                             >
                               Từ chối
                             </button>
@@ -633,7 +633,7 @@ export default function AdminDashboard() {
                           <td className="py-4 px-4 text-right space-x-2">
                             <button 
                               onClick={() => handleResolveReport(report.id)}
-                              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1 rounded"
+                              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1 rounded btn-inner-shadow"
                             >
                               Xóa bài
                             </button>
@@ -686,13 +686,13 @@ export default function AdminDashboard() {
                           <td className="py-4 px-4 text-right space-x-2">
                             <button 
                               onClick={() => handleApproveRegistration(registration.id)}
-                              className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1 rounded"
+                              className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1 rounded btn-inner-shadow"
                             >
                               Duyệt
                             </button>
                             <button 
                               onClick={() => handleOpenRejectRegistrationPopup(registration.id)}
-                              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1 rounded"
+                              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1 rounded btn-inner-shadow"
                             >
                               Từ chối
                             </button>
@@ -825,7 +825,7 @@ export default function AdminDashboard() {
                 type="button"
                 onClick={handleSubmitRejectEvent}
                 disabled={rejectReasons.length === 0}
-                className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium btn-inner-shadow"
               >
                 Từ chối
               </button>
@@ -882,7 +882,7 @@ export default function AdminDashboard() {
                 type="button"
                 onClick={handleSubmitRejectRegistration}
                 disabled={rejectReasons.length === 0}
-                className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                className="flex-1 px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium btn-inner-shadow"
               >
                 Từ chối
               </button>

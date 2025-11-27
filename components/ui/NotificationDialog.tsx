@@ -155,7 +155,7 @@ export default function NotificationDialog({
             <button
               type="button"
               onClick={onConfirm}
-              className={`rounded-xl px-6 py-2.5 text-sm font-medium text-white transition-colors ${
+              className={`rounded-xl px-6 py-2.5 text-sm font-medium text-white transition-colors btn-inner-shadow ${
                 type === 'negative'
                   ? 'bg-red-600 hover:bg-red-700'
                   : 'bg-[#1c1c1c] hover:bg-neutral-800'
