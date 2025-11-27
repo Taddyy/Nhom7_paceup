@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { login } from '@/lib/api/auth-service'
 
-const HERO_IMAGE = '/Image/Login.png?v=20241127'
+const HERO_IMAGE = '/Image/Login Image.png?v=20241127'
 const TESTIMONIAL_AVATAR = '/Image/Run 4.png'
 
 /**
