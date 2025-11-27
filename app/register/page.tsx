@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { register as registerUser } from '@/lib/api/auth-service'
 
-const HERO_IMAGE = '/Image/Login.png'
+const HERO_IMAGE = '/Image/Login.png?v=20241127'
 const TESTIMONIAL_AVATAR = '/Image/Run 6.png'
 
 const INPUT_CLASS =
