@@ -30,40 +30,56 @@ const DEFAULT_POSTS: ContentHighlight[] = [
   }
 ]
 
-const DEFAULT_ARTICLES: ArticleHighlight[] = [
-  {
-    id: 'article-1',
-    author: 'Minh Runner',
-    handle: '@minhrun',
-    avatar: '/Image/Run 1.png',
-    timestamp: '1 giờ trước',
-    title: 'Slow and steady',
-    caption: 'Buổi tempo run sáng sớm cùng đội crew.',
-    media: ['/Image/Run 2.png', '/Image/Run 3.png', '/Image/Run 4.png', '/Image/Run 5.png'],
-    comments: [
-      {
-        id: 'comment-1',
-        author: 'An',
-        avatar: '/Image/Run 2.png',
-        content: 'Giữ nhịp quá tốt luôn! 💪',
-        timestamp: '30 phút trước'
-      }
-    ],
-    likes: 132
-  },
-  {
-    id: 'article-2',
-    author: 'Lan Pace',
-    handle: '@lanpace',
-    avatar: '/Image/Run 6.png',
-    timestamp: '2 giờ trước',
-    title: 'Tập hill repeat tại Thủ Đức',
-    caption: 'Độ cao vừa đủ để đốt cháy bắp chân.',
-    media: ['/Image/Run 6.png', '/Image/Run 5.png'],
-    comments: [],
-    likes: 86
+const DEFAULT_ARTICLES: ArticleHighlight[] = []
+
+const mapContentPostToArticle = (post: ContentPost): ArticleHighlight => {
+  // Extract plain text from HTML content for caption
+  const plainText = (post.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  const caption = plainText.length > 200 ? `${plainText.slice(0, 200)}…` : plainText || ''
+  
+  // Extract media URLs from content (if any) or use image_url
+  const media: string[] = []
+  if (post.image_url) {
+    media.push(post.image_url)
   }
-]
+  
+  // Format timestamp
+  const createdAt = new Date(post.created_at)
+  const now = new Date()
+  const diffMs = now.getTime() - createdAt.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  
+  let timestamp = 'Vừa xong'
+  if (diffMins > 0 && diffMins < 60) {
+    timestamp = `${diffMins} phút trước`
+  } else if (diffHours > 0 && diffHours < 24) {
+    timestamp = `${diffHours} giờ trước`
+  } else if (diffDays > 0 && diffDays < 7) {
+    timestamp = `${diffDays} ngày trước`
+  } else {
+    timestamp = createdAt.toLocaleDateString('vi-VN')
+  }
+  
+  // Extract handle from email or use default
+  const handle = post.author_name ? `@${post.author_name.toLowerCase().replace(/\s+/g, '')}` : '@user'
+  
+  return {
+    id: post.id,
+    author: post.author_name || 'PaceUp Studio',
+    handle,
+    avatar: post.author_avatar || '/Image/Run 1.png',
+    timestamp,
+    title: post.title,
+    caption,
+    media,
+    comments: [],
+    likes: post.likes_count || 0,
+    author_id: post.author_id, // For checking ownership
+    content_post_id: post.id // For edit/delete operations
+  }
+}
 
 const mapContentPostToHighlight = (post: ContentPost): ContentHighlight => {
   const plain = (post.excerpt || post.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -98,13 +114,16 @@ export default function ContentPage() {
     const fetchContentPosts = async () => {
       try {
         setIsFetchingPosts(true)
-        const response = await getContentPosts(1, 6)
+        const response = await getContentPosts(1, 100) // Fetch more for articles
         if (response.posts.length > 0) {
           setPosts(response.posts.map(mapContentPostToHighlight))
+          // Map content posts to articles
+          setArticles(response.posts.map(mapContentPostToArticle))
         }
       } catch (error) {
         console.error('Failed to load content posts:', error)
         setPosts(DEFAULT_POSTS)
+        setArticles(DEFAULT_ARTICLES)
       } finally {
         setIsFetchingPosts(false)
       }

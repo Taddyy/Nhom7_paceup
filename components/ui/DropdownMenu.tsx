@@ -8,6 +8,7 @@ export interface DropdownOption {
   unavailable?: boolean
   selected?: boolean
   onClick: () => void
+  className?: string
 }
 
 interface DropdownMenuProps {
@@ -56,10 +57,12 @@ export default function DropdownMenu({ options, trigger, className = '', align =
                 }
               }}
               disabled={option.unavailable || option.selected}
-              className={`w-full px-4 py-3 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors ${
+              className={`w-full px-4 py-3 text-left text-sm transition-colors ${
                 index > 0 ? 'border-t border-neutral-200' : ''
               } ${
                 option.unavailable || option.selected ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+              } ${
+                option.className || 'text-neutral-700 hover:bg-neutral-50'
               }`}
             >
               {option.label}

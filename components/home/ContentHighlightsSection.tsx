@@ -5,8 +5,8 @@ import Link from 'next/link'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createBlogPost } from '@/lib/api/blog-service'
-import { createContentPost } from '@/lib/api/content-service'
-import { getCurrentUser } from '@/lib/api/auth-service'
+import { createContentPost, updateContentPost, deleteContentPost } from '@/lib/api/content-service'
+import { getCurrentUser, type User } from '@/lib/api/auth-service'
 import RichTextEditor from '@/components/ui/RichTextEditor'
 import DropdownMenu, { type DropdownOption } from '@/components/ui/DropdownMenu'
 import CustomSelect, { type SelectOption } from '@/components/ui/CustomSelect'
@@ -47,6 +47,8 @@ export interface ArticleHighlight {
   media: string[]
   comments: ArticleComment[]
   likes: number
+  author_id?: string // For checking if current user is the owner
+  content_post_id?: string // ID of the content post in backend (for edit/delete)
 }
 
 interface GifResult {
@@ -333,7 +335,15 @@ export default function ContentHighlightsSection({
             <div className="columns-1 lg:columns-2" style={{ columnGap: '40px' }}>
               {localArticles.map((article) => (
                 <div key={article.id} className="break-inside-avoid mb-6">
-                  <ArticleCard article={article} />
+                  <ArticleCard 
+                    article={article}
+                    onArticleUpdated={(updatedArticle) => {
+                      setLocalArticles(prev => prev.map(a => a.id === updatedArticle.id ? updatedArticle : a))
+                    }}
+                    onArticleDeleted={(articleId) => {
+                      setLocalArticles(prev => prev.filter(a => a.id !== articleId))
+                    }}
+                  />
                 </div>
               ))}
             </div>
@@ -352,7 +362,15 @@ export default function ContentHighlightsSection({
   )
 }
 
-const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
+const ArticleCard = ({ 
+  article,
+  onArticleUpdated,
+  onArticleDeleted
+}: { 
+  article: ArticleHighlight
+  onArticleUpdated?: (updatedArticle: ArticleHighlight) => void
+  onArticleDeleted?: (articleId: string) => void
+}) => {
   const [commentText, setCommentText] = useState('')
   const [isLiked, setIsLiked] = useState(false)
   const [isGifPickerOpen, setGifPickerOpen] = useState(false)
@@ -366,12 +384,47 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
   const [commentList, setCommentList] = useState<ArticleComment[]>(article.comments)
   const COMMENTS_PER_VIEW = 2
   
+  // Current user state
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [isLoadingUser, setIsLoadingUser] = useState(true)
+  
+  // Edit state
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editTitle, setEditTitle] = useState(article.title)
+  const [editCaption, setEditCaption] = useState(article.caption)
+  const [editMedia, setEditMedia] = useState<Array<{ id: string; type: 'image' | 'video' | 'gif'; url: string; preview?: string; file?: File }>>(
+    article.media.map((url, idx) => ({ id: `media-${idx}`, type: 'image' as const, url }))
+  )
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const editImageInputRef = useRef<HTMLInputElement>(null)
+  const editVideoInputRef = useRef<HTMLInputElement>(null)
+  
   // Report and hide states
   const [isReportOpen, setIsReportOpen] = useState(false)
   const [isHidden, setIsHidden] = useState(false)
   const [reportReasons, setReportReasons] = useState<string[]>([])
   const [reportDescription, setReportDescription] = useState('')
   const reportRef = useRef<HTMLDivElement>(null)
+  
+  // Check if current user is the owner
+  const isOwner = currentUser && article.author_id && currentUser.id === article.author_id
+  
+  // Load current user
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const user = await getCurrentUser()
+        setCurrentUser(user)
+      } catch (error) {
+        console.error('Failed to load current user:', error)
+        setCurrentUser(null)
+      } finally {
+        setIsLoadingUser(false)
+      }
+    }
+    loadUser()
+  }, [])
 
   const [activeSlide, setActiveSlide] = useState(0)
   const imageInputRef = useRef<HTMLInputElement>(null)
@@ -645,30 +698,44 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
         <span className="text-sm text-neutral-400">{article.handle}</span>
         
         {/* Options button */}
-        <DropdownMenu
-          options={[
-            {
-              label: 'Báo cáo',
-              value: 'report',
-              onClick: () => setIsReportOpen(true)
-            },
-            {
-              label: 'Ẩn',
-              value: 'hide',
-              onClick: handleHidePost
+        {!isLoadingUser && (
+          <DropdownMenu
+            options={isOwner ? [
+              {
+                label: 'Sửa bài',
+                value: 'edit',
+                onClick: handleEditPost
+              },
+              {
+                label: 'Xóa bài',
+                value: 'delete',
+                onClick: handleDeletePost,
+                className: 'text-red-600 hover:bg-red-50'
+              }
+            ] : [
+              {
+                label: 'Báo cáo',
+                value: 'report',
+                onClick: () => setIsReportOpen(true)
+              },
+              {
+                label: 'Ẩn',
+                value: 'hide',
+                onClick: handleHidePost
+              }
+            ]}
+            trigger={
+              <button
+                type="button"
+                className="p-1 hover:bg-neutral-100 rounded-full transition-colors"
+                aria-label="Tùy chọn"
+              >
+                <Image src="/Icon/more.svg" alt="Tùy chọn" width={24} height={24} />
+              </button>
             }
-          ]}
-          trigger={
-            <button
-              type="button"
-              className="p-1 hover:bg-neutral-100 rounded-full transition-colors"
-              aria-label="Tùy chọn"
-            >
-              <Image src="/Icon/more.svg" alt="Tùy chọn" width={24} height={24} />
-            </button>
-          }
-          align="right"
-        />
+            align="right"
+          />
+        )}
       </div>
 
       {/* Report Popup */}
@@ -737,18 +804,125 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
         </div>
       )}
 
-      {hasTitleOrCaption && (
-        <div className="flex flex-col gap-2 mt-3">
-          {article.title && article.title.trim() && (
-            <h3 className="text-[24px] font-semibold leading-[32px] text-neutral-950">{article.title}</h3>
+      {/* Edit Form */}
+      {isEditMode ? (
+        <div className="mt-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-2">Tiêu đề</label>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-base text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#1c1c1c]"
+              placeholder="Nhập tiêu đề..."
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-2">Nội dung</label>
+            <textarea
+              value={editCaption}
+              onChange={(e) => setEditCaption(e.target.value)}
+              rows={4}
+              className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-base text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#1c1c1c] resize-none"
+              placeholder="Chia sẻ cảm xúc của bạn..."
+            />
+          </div>
+          
+          {/* Media Preview */}
+          {editMedia.length > 0 && (
+            <div className="grid grid-cols-3 gap-3">
+              {editMedia.map((item) => (
+                <div key={item.id} className="relative aspect-square rounded-xl overflow-hidden group">
+                  {item.type === 'video' ? (
+                    <video src={item.url} className="w-full h-full object-cover" muted loop />
+                  ) : (
+                    <img src={item.preview || item.url} alt="Preview" className="w-full h-full object-cover" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeEditMedia(item.id)}
+                    className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
-          {article.caption && article.caption.trim() && (
-            <p className="text-base text-neutral-600">{article.caption}</p>
-          )}
+          
+          {/* Media Upload Buttons */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => editImageInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-200 text-sm text-neutral-700 hover:bg-neutral-50 transition"
+            >
+              <Image src="/Icon/photo.svg" alt="Ảnh" width={20} height={20} />
+              Thêm ảnh
+            </button>
+            <input
+              ref={editImageInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(event) => handleEditMediaChange(event, 'image')}
+              className="hidden"
+              multiple
+            />
+            <button
+              type="button"
+              onClick={() => editVideoInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-200 text-sm text-neutral-700 hover:bg-neutral-50 transition"
+            >
+              <Image src="/Icon/clapperboard.svg" alt="Video" width={20} height={20} />
+              Thêm video
+            </button>
+            <input
+              ref={editVideoInputRef}
+              type="file"
+              accept="video/*"
+              onChange={(event) => handleEditMediaChange(event, 'video')}
+              className="hidden"
+              multiple
+            />
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              disabled={isSaving}
+              className="flex-1 px-4 py-2 rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-50 transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveEdit}
+              disabled={isSaving || (!editTitle.trim() && !editCaption.trim() && editMedia.length === 0)}
+              className="flex-1 px-4 py-2 rounded-xl bg-[#1c1c1c] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+            >
+              {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+            </button>
+          </div>
         </div>
-      )}
+      ) : (
+        <>
+          {hasTitleOrCaption && (
+            <div className="flex flex-col gap-2 mt-3">
+              {article.title && article.title.trim() && (
+                <h3 className="text-[24px] font-semibold leading-[32px] text-neutral-950">{article.title}</h3>
+              )}
+              {article.caption && article.caption.trim() && (
+                <p className="text-base text-neutral-600">{article.caption}</p>
+              )}
+            </div>
+          )}
 
-      {hasMedia ? (
+          {hasMedia ? (
         <div className="flex flex-col gap-3 mt-3">
           <div className="relative w-full">
             <div
@@ -837,9 +1011,11 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
             {likeCountLabel} lượt thích
           </button>
         </div>
+        )}
+        </>
       )}
 
-      {hasComments && (
+      {!isEditMode && hasComments && (
         <div className="flex flex-col gap-3 mt-3">
           {commentList.length <= COMMENTS_PER_VIEW ? (
             // Nếu có 2 comments trở xuống, hiển thị tất cả không cần scroll
@@ -941,7 +1117,8 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
         </div>
       )}
 
-      <form className="rounded-[28px] border border-black/5 bg-white p-4 mt-3" onSubmit={handleSubmit}>
+      {!isEditMode && (
+        <form className="rounded-[28px] border border-black/5 bg-white p-4 mt-3" onSubmit={handleSubmit}>
         <label htmlFor={`comment-${article.id}`} className="sr-only">
           Viết bình luận
         </label>
@@ -1079,6 +1256,7 @@ const ArticleCard = ({ article }: { article: ArticleHighlight }) => {
           </button>
         </div>
       </form>
+      )}
     </article>
   )
 }
