@@ -66,6 +66,7 @@ interface ContentHighlightsSectionProps {
   onArticleDeleted?: (articleId: string) => void
   onContentPostCreated?: () => void
   isLoadingBlogs?: boolean
+  hideTabNavigation?: boolean // If true, hide tab navigation and only show articles
 }
 
 type ContentTab = 'articles' | 'blog'
@@ -192,9 +193,10 @@ export default function ContentHighlightsSection({
   onArticleAdded,
   onArticleDeleted,
   onContentPostCreated,
-  isLoadingBlogs = false
+  isLoadingBlogs = false,
+  hideTabNavigation = false
 }: ContentHighlightsSectionProps) {
-  const [activeTab, setActiveTab] = useState<ContentTab>('blog')
+  const [activeTab, setActiveTab] = useState<ContentTab>(hideTabNavigation ? 'articles' : 'blog')
   const [localArticles, setLocalArticles] = useState<ArticleHighlight[]>(articles)
   const [blogSearchQuery, setBlogSearchQuery] = useState('')
 
@@ -223,18 +225,20 @@ export default function ContentHighlightsSection({
     <section className="w-full flex justify-center bg-white">
       <div className="w-full max-w-[1200px] px-4 md:px-0 py-10 flex flex-col gap-10 items-center">
 
-        <div className="bg-[#ececf0] rounded-lg flex items-center justify-between p-1 w-full max-w-[368px]">
-          <button type="button" className={tabButtonClass('articles')} onClick={() => setActiveTab('articles')}>
-            Bài viết
-          </button>
-          <button type="button" className={tabButtonClass('blog')} onClick={() => setActiveTab('blog')}>
-            Blog
-          </button>
-        </div>
+        {!hideTabNavigation && (
+          <div className="bg-[#ececf0] rounded-lg flex items-center justify-between p-1 w-full max-w-[368px]">
+            <button type="button" className={tabButtonClass('articles')} onClick={() => setActiveTab('articles')}>
+              Bài viết
+            </button>
+            <button type="button" className={tabButtonClass('blog')} onClick={() => setActiveTab('blog')}>
+              Blog
+            </button>
+          </div>
+        )}
 
-        {showCreateButton && activeTab === 'blog' && <BlogComposer />}
+        {!hideTabNavigation && showCreateButton && activeTab === 'blog' && <BlogComposer />}
 
-        {showCreateButton && activeTab === 'articles' && (
+        {showCreateButton && (hideTabNavigation || activeTab === 'articles') && (
           <ArticleComposer 
             onArticleCreated={(newArticle) => {
               // Add new article to local state
@@ -252,7 +256,7 @@ export default function ContentHighlightsSection({
           />
         )}
 
-        {activeTab === 'blog' ? (
+        {(!hideTabNavigation && activeTab === 'blog') ? (
           <div className="w-full flex flex-col gap-6 items-center">
             <form
               className="relative w-full max-w-[520px] self-center"
@@ -333,7 +337,7 @@ export default function ContentHighlightsSection({
               </div>
             )}
           </div>
-        ) : (
+        ) : (hideTabNavigation || activeTab === 'articles') ? (
           <div className="flex flex-col w-full">
             <div className="columns-1 lg:columns-2" style={{ columnGap: '40px' }}>
               {localArticles.map((article) => (
@@ -353,16 +357,18 @@ export default function ContentHighlightsSection({
                 </div>
               ))}
             </div>
-            <div className="w-full flex justify-center mt-10">
-              <Link
-                href="/content"
-                className="bg-[#1c1c1c] inline-flex items-center justify-center px-5 py-2 rounded-lg text-white uppercase text-sm tracking-wide shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.4),inset_4px_4px_6px_rgba(255,255,255,0.15)]"
-              >
-                Xem thêm
-              </Link>
-            </div>
+            {!hideTabNavigation && (
+              <div className="w-full flex justify-center mt-10">
+                <Link
+                  href="/content"
+                  className="bg-[#1c1c1c] inline-flex items-center justify-center px-5 py-2 rounded-lg text-white uppercase text-sm tracking-wide shadow-[inset_-4px_-4px_4px_rgba(0,0,0,0.4),inset_4px_4px_6px_rgba(255,255,255,0.15)]"
+                >
+                  Xem thêm
+                </Link>
+              </div>
+            )}
           </div>
-        )}
+        ) : null}
       </div>
     </section>
   )

@@ -638,6 +638,7 @@ export default function ProfilePage() {
                   posts={[]} // Không cần highlights cho profile
                   articles={myContentPosts.map(mapContentPostToArticle)}
                   showCreateButton={false}
+                  hideTabNavigation={true} // Ẩn tab navigation, chỉ hiển thị bài viết
                   onArticleDeleted={(articleId) => {
                     // Remove deleted article from list
                     setMyContentPosts(prev => prev.filter(post => post.id !== articleId))
