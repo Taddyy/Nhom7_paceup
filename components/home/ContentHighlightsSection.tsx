@@ -63,6 +63,7 @@ interface ContentHighlightsSectionProps {
   articles: ArticleHighlight[]
   showCreateButton?: boolean
   onArticleAdded?: (article: ArticleHighlight) => void
+  onArticleDeleted?: (articleId: string) => void
   onContentPostCreated?: () => void
   isLoadingBlogs?: boolean
 }
@@ -189,6 +190,7 @@ export default function ContentHighlightsSection({
   articles,
   showCreateButton,
   onArticleAdded,
+  onArticleDeleted,
   onContentPostCreated,
   isLoadingBlogs = false
 }: ContentHighlightsSectionProps) {
@@ -343,6 +345,9 @@ export default function ContentHighlightsSection({
                     }}
                     onArticleDeleted={(articleId) => {
                       setLocalArticles(prev => prev.filter(a => a.id !== articleId))
+                      if (onArticleDeleted) {
+                        onArticleDeleted(articleId)
+                      }
                     }}
                   />
                 </div>
