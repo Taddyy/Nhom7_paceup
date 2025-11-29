@@ -131,12 +131,24 @@ export default function EventRegistrationPaymentPage() {
     }
   }, [eventId, router])
 
+  // Check if this is a fallback event (demo event not in database)
+  const isFallbackEvent = eventId.startsWith('fallback-')
+
   // Create sandbox payment session when we have ticket + participant
   useEffect(() => {
     let isSubscribed = true
 
     const ensureSession = async () => {
       if (!ticket || !participant || paymentSession) return
+      
+      // Skip API call for fallback events (they don't exist in database)
+      if (isFallbackEvent) {
+        // For fallback events, create a mock session for demo purposes
+        // This allows the UI to work but won't create real database records
+        setSessionError('Đây là sự kiện demo. Payment session chỉ hoạt động với sự kiện thật trong database.')
+        return
+      }
+
       try {
         setSessionError(null)
         const session = await createPaymentSession({
@@ -159,10 +171,19 @@ export default function EventRegistrationPaymentPage() {
     return () => {
       isSubscribed = false
     }
-  }, [eventId, ticket, participant, paymentSession])
+  }, [eventId, ticket, participant, paymentSession, isFallbackEvent])
 
   // Sandbox QR link generation (cross-device sync)
   const confirmUrl = useMemo(() => {
+    // For fallback events, create a demo URL (won't work but shows the flow)
+    if (isFallbackEvent) {
+      const baseUrl =
+        typeof window !== 'undefined'
+          ? window.location.origin
+          : 'https://paceup-sandbox.local'
+      return `${baseUrl}/payment/confirm?session_id=demo-fallback-${eventId}`
+    }
+
     if (!paymentSession) return null
 
     // The URL that mobile will open after scanning QR
@@ -172,7 +193,7 @@ export default function EventRegistrationPaymentPage() {
         : 'https://paceup-sandbox.local'
 
     return `${baseUrl}/payment/confirm?session_id=${encodeURIComponent(paymentSession.id)}`
-  }, [paymentSession])
+  }, [paymentSession, isFallbackEvent, eventId])
 
   // Poll payment status
   useEffect(() => {
@@ -316,19 +337,33 @@ export default function EventRegistrationPaymentPage() {
               <h2 className="mt-3 text-2xl font-semibold text-neutral-900">Thanh toán sandbox (Đồ án môn học)</h2>
               
               {sessionError && (
-                <div className="mt-4 w-full max-w-md rounded-lg border border-red-200 bg-red-50 p-4 text-left">
-                  <p className="text-sm font-semibold text-red-800">Lỗi tạo phiên thanh toán</p>
-                  <p className="mt-1 text-sm text-red-600">{sessionError}</p>
-                  <button
-                    onClick={() => {
-                      setPaymentSession(null)
-                      setSessionError(null)
-                      setPollingStatus('idle')
-                    }}
-                    className="mt-3 text-sm font-medium text-red-700 underline hover:text-red-900"
-                  >
-                    Thử lại
-                  </button>
+                <div className={`mt-4 w-full max-w-md rounded-lg border p-4 text-left ${
+                  isFallbackEvent 
+                    ? 'border-yellow-200 bg-yellow-50' 
+                    : 'border-red-200 bg-red-50'
+                }`}>
+                  <p className={`text-sm font-semibold ${
+                    isFallbackEvent ? 'text-yellow-800' : 'text-red-800'
+                  }`}>
+                    {isFallbackEvent ? 'Thông báo demo' : 'Lỗi tạo phiên thanh toán'}
+                  </p>
+                  <p className={`mt-1 text-sm ${
+                    isFallbackEvent ? 'text-yellow-700' : 'text-red-600'
+                  }`}>
+                    {sessionError}
+                  </p>
+                  {!isFallbackEvent && (
+                    <button
+                      onClick={() => {
+                        setPaymentSession(null)
+                        setSessionError(null)
+                        setPollingStatus('idle')
+                      }}
+                      className="mt-3 text-sm font-medium text-red-700 underline hover:text-red-900"
+                    >
+                      Thử lại
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -340,7 +375,7 @@ export default function EventRegistrationPaymentPage() {
                 </div>
               )}
 
-              {paymentSession && confirmUrl && (
+              {(paymentSession || (isFallbackEvent && confirmUrl)) && confirmUrl && (
                 <>
                   <div className="mt-6 inline-flex rounded-[32px] border border-neutral-100 bg-neutral-50 p-6">
                     <QRCodeSVG
@@ -352,15 +387,23 @@ export default function EventRegistrationPaymentPage() {
                     />
                   </div>
                   <p className="mt-6 text-sm text-neutral-500 max-w-md">
-                    Dùng điện thoại quét mã QR này để mở trang xác nhận thanh toán giả lập trên điện thoại.
+                    {isFallbackEvent 
+                      ? 'Đây là QR code demo. Với sự kiện thật, bạn có thể quét mã này để xác nhận thanh toán trên điện thoại.'
+                      : 'Dùng điện thoại quét mã QR này để mở trang xác nhận thanh toán giả lập trên điện thoại.'}
                   </p>
-                  {pollingStatus === 'running' && (
+                  {pollingStatus === 'running' && !isFallbackEvent && (
                     <div className="mt-4 flex items-center gap-2 text-sm text-blue-600">
                       <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
                       Đang chờ xác nhận từ điện thoại...
+                    </div>
+                  )}
+                  {isFallbackEvent && (
+                    <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+                      <p className="font-semibold">Lưu ý:</p>
+                      <p className="mt-1">Đây là sự kiện demo. Để test tính năng thanh toán sandbox đầy đủ, vui lòng sử dụng sự kiện thật từ database.</p>
                     </div>
                   )}
                 </>
@@ -421,8 +464,13 @@ export default function EventRegistrationPaymentPage() {
               
               <button 
                 className="w-full rounded-[14px] bg-[#1c1c1c] py-4 text-white font-semibold shadow-lg hover:bg-neutral-800 transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!paymentSession || isCheckingStatus || pollingStatus === 'completed'}
+                disabled={(!paymentSession && !isFallbackEvent) || isCheckingStatus || pollingStatus === 'completed'}
                 onClick={async () => {
+                  if (isFallbackEvent) {
+                    alert('Đây là sự kiện demo. Tính năng thanh toán chỉ hoạt động với sự kiện thật trong database.')
+                    return
+                  }
+                  
                   if (!paymentSession) return
                   try {
                     setIsCheckingStatus(true)
@@ -447,7 +495,9 @@ export default function EventRegistrationPaymentPage() {
                   }
                 }}
               >
-                {isCheckingStatus 
+                {isFallbackEvent
+                  ? 'Sự kiện demo - Không thể thanh toán'
+                  : isCheckingStatus 
                   ? 'Đang kiểm tra trạng thái...' 
                   : paymentSession?.status === 'success'
                   ? 'Đã thanh toán thành công'
