@@ -4,7 +4,19 @@ API v1 router
 import re
 from fastapi import APIRouter
 from sqlalchemy import text
-from app.api.v1.endpoints import auth, blog, content, events, documents, admin, reports, notifications, email_subscriptions, password_reset
+from app.api.v1.endpoints import (
+    admin,
+    auth,
+    blog,
+    content,
+    documents,
+    email_subscriptions,
+    events,
+    notifications,
+    password_reset,
+    payment,
+    reports,
+)
 from app.core.database import SessionLocal
 from app.core.config import settings
 
@@ -14,6 +26,7 @@ api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(blog.router, prefix="/blog", tags=["blog"])
 api_router.include_router(content.router, prefix="/content", tags=["content"])
 api_router.include_router(events.router, prefix="/events", tags=["events"])
+api_router.include_router(payment.router, prefix="/payment", tags=["payment"])
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])

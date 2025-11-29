@@ -25,6 +25,7 @@ export interface EventRegistration {
   rejection_description?: string
   created_at: string
   updated_at?: string
+  amount?: number
 }
 
 export interface RejectRegistrationRequest {
@@ -96,6 +97,11 @@ export async function getAdminRegistrations(status: string = 'pending', page = 1
   const response = await apiClient.get<EventRegistration[]>('/admin/registrations', {
     params: { status, page, limit }
   })
+  return response.data
+}
+
+export async function getEventRegistrationsWithPayments(eventId: string) {
+  const response = await apiClient.get<EventRegistration[]>(`/admin/events/${eventId}/registrations`)
   return response.data
 }
 

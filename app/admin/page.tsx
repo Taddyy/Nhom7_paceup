@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getAdminStats, getAdminPosts, updatePostStatus, getAdminEvents, updateEventStatus, rejectEvent, getAdminReports, resolveReport, dismissReport, getAdminRegistrations, approveRegistration, rejectRegistration, type AdminStats, type EventRegistration, type RejectRegistrationRequest } from '@/lib/api/admin'
+import { getAdminStats, getAdminPosts, updatePostStatus, getAdminEvents, updateEventStatus, rejectEvent, getAdminReports, resolveReport, dismissReport, getAdminRegistrations, approveRegistration, rejectRegistration, getEventRegistrationsWithPayments, type AdminStats, type EventRegistration, type RejectRegistrationRequest } from '@/lib/api/admin'
 import { getCurrentUser, logout } from '@/lib/api/auth-service'
 import type { BlogPost } from '@/lib/api/blog-service'
 import type { Event } from '@/lib/api/events'
@@ -18,6 +18,8 @@ export default function AdminDashboard() {
   const [events, setEvents] = useState<Event[]>([])
   const [reports, setReports] = useState<Report[]>([])
   const [registrations, setRegistrations] = useState<EventRegistration[]>([])
+  const [selectedEventForStats, setSelectedEventForStats] = useState<Event | null>(null)
+  const [eventRegistrationsWithPayments, setEventRegistrationsWithPayments] = useState<EventRegistration[]>([])
   const [emailSubscriptions, setEmailSubscriptions] = useState<EmailSubscription[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean }>({ message: '', type: 'success', isVisible: false })
@@ -216,6 +218,20 @@ export default function AdminDashboard() {
         message: 'Lỗi khi tải danh sách đăng ký.', 
         type: 'error', 
         isVisible: true 
+      })
+    }
+  }
+
+  const fetchEventRegistrationsWithPayments = async (eventId: string) => {
+    try {
+      const data = await getEventRegistrationsWithPayments(eventId)
+      setEventRegistrationsWithPayments(data)
+    } catch (error) {
+      console.error('Failed to fetch event registrations with payments:', error)
+      setToast({
+        message: 'Lỗi khi tải danh sách đăng ký và thanh toán cho sự kiện.',
+        type: 'error',
+        isVisible: true
       })
     }
   }
@@ -528,65 +544,176 @@ export default function AdminDashboard() {
             {/* Events Tab */}
             {activeTab === 'events' && (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-gray-200 text-gray-500 text-sm">
-                      <th className="py-3 px-4">Tên sự kiện</th>
-                      <th className="py-3 px-4">Ban tổ chức</th>
-                      <th className="py-3 px-4">Địa điểm</th>
-                      <th className="py-3 px-4">Ngày diễn ra</th>
-                      <th className="py-3 px-4">Tài khoản nhận tiền</th>
-                      <th className="py-3 px-4 text-right">Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {events.length > 0 ? (
-                      events.map(event => (
-                        <tr key={event.id} className="hover:bg-gray-50 transition">
-                          <td className="py-4 px-4 font-medium text-gray-900 max-w-xs truncate" title={event.title}>{event.title}</td>
-                          <td className="py-4 px-4 text-gray-600">{event.organizer_name}</td>
-                          <td className="py-4 px-4 text-gray-600 max-w-xs truncate">{event.location}</td>
-                          <td className="py-4 px-4 text-gray-500 text-sm">{new Date(event.date).toLocaleDateString('vi-VN')}</td>
-                          <td className="py-4 px-4 text-gray-600 text-sm">
-                            {event.bank_name && event.account_number && event.account_holder_name ? (
-                              <div className="space-y-1">
-                                <div className="font-medium">{event.bank_name}</div>
-                                <div className="text-gray-500">{event.account_number}</div>
-                                <div className="text-gray-500">{event.account_holder_name}</div>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400 italic">Chưa có thông tin</span>
-                            )}
-                          </td>
-                          <td className="py-4 px-4 text-right space-x-2">
-                            <button 
-                              onClick={() => window.open(`/events/${event.id}`, '_blank')}
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1"
-                            >
-                              Xem
-                            </button>
-                            <button 
-                              onClick={() => handleApproveEvent(event.id)}
-                              className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1 rounded btn-inner-shadow"
-                            >
-                              Duyệt
-                            </button>
-                            <button 
-                              onClick={() => handleOpenRejectEventPopup(event.id)}
-                              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1 rounded btn-inner-shadow"
-                            >
-                              Từ chối
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={6} className="py-8 text-center text-gray-500">Không có sự kiện nào chờ duyệt.</td>
+                <div className="space-y-8">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-gray-500 text-sm">
+                        <th className="py-3 px-4">Tên sự kiện</th>
+                        <th className="py-3 px-4">Ban tổ chức</th>
+                        <th className="py-3 px-4">Địa điểm</th>
+                        <th className="py-3 px-4">Ngày diễn ra</th>
+                        <th className="py-3 px-4">Tài khoản nhận tiền</th>
+                        <th className="py-3 px-4 text-right">Hành động</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {events.length > 0 ? (
+                        events.map(event => (
+                          <tr key={event.id} className="hover:bg-gray-50 transition">
+                            <td className="py-4 px-4 font-medium text-gray-900 max-w-xs truncate" title={event.title}>{event.title}</td>
+                            <td className="py-4 px-4 text-gray-600">{event.organizer_name}</td>
+                            <td className="py-4 px-4 text-gray-600 max-w-xs truncate">{event.location}</td>
+                            <td className="py-4 px-4 text-gray-500 text-sm">{new Date(event.date).toLocaleDateString('vi-VN')}</td>
+                            <td className="py-4 px-4 text-gray-600 text-sm">
+                              {event.bank_name && event.account_number && event.account_holder_name ? (
+                                <div className="space-y-1">
+                                  <div className="font-medium">{event.bank_name}</div>
+                                  <div className="text-gray-500">{event.account_number}</div>
+                                  <div className="text-gray-500">{event.account_holder_name}</div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 italic">Chưa có thông tin</span>
+                              )}
+                            </td>
+                            <td className="py-4 px-4 text-right space-x-2">
+                              <button 
+                                onClick={() => window.open(`/events/${event.id}`, '_blank')}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1"
+                              >
+                                Xem
+                              </button>
+                              <button 
+                                onClick={() => handleApproveEvent(event.id)}
+                                className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1 rounded btn-inner-shadow"
+                              >
+                                Duyệt
+                              </button>
+                              <button 
+                                onClick={() => handleOpenRejectEventPopup(event.id)}
+                                className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1 rounded btn-inner-shadow"
+                              >
+                                Từ chối
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedEventForStats(event)
+                                  fetchEventRegistrationsWithPayments(event.id)
+                                }}
+                                className="bg-gray-100 text-gray-800 hover:bg-gray-200 text-sm font-medium px-3 py-1 rounded"
+                              >
+                                Xem đăng ký & tổng tiền
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-gray-500">Không có sự kiện nào chờ duyệt.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+
+                  {selectedEventForStats && (
+                    <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="text-sm uppercase tracking-[0.2em] text-gray-400">THỐNG KÊ SỰ KIỆN</p>
+                          <p className="mt-1 text-lg font-semibold text-gray-900">{selectedEventForStats.title}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedEventForStats(null)
+                            setEventRegistrationsWithPayments([])
+                          }}
+                          className="text-sm text-gray-500 hover:text-gray-800"
+                        >
+                          Đóng
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="bg-white rounded-lg border border-gray-200 p-4">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-[0.16em] mb-1">
+                            Số lượt đăng ký
+                          </p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {eventRegistrationsWithPayments.length}
+                          </p>
+                        </div>
+                        <div className="bg-white rounded-lg border border-gray-200 p-4">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-[0.16em] mb-1">
+                            Số lượt đã thanh toán (sandbox)
+                          </p>
+                          <p className="text-2xl font-bold text-green-700">
+                            {eventRegistrationsWithPayments.filter(r => r.amount && r.amount > 0).length}
+                          </p>
+                        </div>
+                        <div className="bg-white rounded-lg border border-gray-200 p-4">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-[0.16em] mb-1">
+                            Tổng số tiền (sandbox)
+                          </p>
+                          <p className="text-2xl font-bold text-blue-700">
+                            {eventRegistrationsWithPayments
+                              .reduce((sum, r) => sum + (r.amount || 0), 0)
+                              .toLocaleString('vi-VN')}{' '}
+                            VND
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-200 text-gray-500">
+                              <th className="py-2 px-3">Người đăng ký</th>
+                              <th className="py-2 px-3">Hạng mục</th>
+                              <th className="py-2 px-3">Trạng thái</th>
+                              <th className="py-2 px-3 text-right">Số tiền (sandbox)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {eventRegistrationsWithPayments.length > 0 ? (
+                              eventRegistrationsWithPayments.map(reg => (
+                                <tr key={reg.id}>
+                                  <td className="py-2 px-3 text-gray-900">{reg.user_name}</td>
+                                  <td className="py-2 px-3">
+                                    <span className="bg-blue-50 text-blue-800 px-2 py-1 rounded text-xs">
+                                      {reg.category}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    <span
+                                      className={
+                                        reg.status === 'approved'
+                                          ? 'text-green-700 bg-green-50 px-2 py-1 rounded text-xs'
+                                          : reg.status === 'rejected'
+                                          ? 'text-red-700 bg-red-50 px-2 py-1 rounded text-xs'
+                                          : 'text-yellow-700 bg-yellow-50 px-2 py-1 rounded text-xs'
+                                      }
+                                    >
+                                      {reg.status.toUpperCase()}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-3 text-right text-gray-900">
+                                    {reg.amount ? `${reg.amount.toLocaleString('vi-VN')} VND` : '-'}
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan={4} className="py-4 text-center text-gray-500">
+                                  Chưa có đăng ký nào cho sự kiện này.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

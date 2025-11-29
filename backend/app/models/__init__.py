@@ -2,6 +2,7 @@
 from app.models.user import User
 from app.models.blog import BlogPost, BlogPostLike
 from app.models.event import Event, EventRegistration
+from app.models.payment import PaymentSession
 from app.models.report import Report
 from app.models.notification import Notification
 from app.models.email_subscription import EmailSubscription
@@ -13,9 +14,11 @@ __all__ = [
     "BlogPostLike",
     "Event",
     "EventRegistration",
+    "PaymentSession",
     "Report",
     "Notification",
     "EmailSubscription",
     "PasswordResetToken",
-] 
+]
+
 

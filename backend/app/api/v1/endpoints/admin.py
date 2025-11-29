@@ -10,6 +10,7 @@ from app.core.security import decode_access_token
 from app.models.user import User
 from app.models.blog import BlogPost
 from app.models.event import Event, EventRegistration
+from app.models.payment import PaymentSession
 from app.models.report import Report
 from app.schemas.blog import BlogPostResponse
 from app.schemas.event import EventResponse
@@ -43,6 +44,13 @@ class EventRegistrationResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class EventRegistrationWithPaymentResponse(EventRegistrationResponse):
+    """Extended registration response with payment-related information."""
+
+    amount: Optional[int] = None
+
 
 class RejectEventRegistrationRequest(BaseModel):
     reasons: TypingList[str]
@@ -328,43 +336,106 @@ async def dismiss_report(
     db.commit()
     return {"message": "Report dismissed"}
 
-# Event Registration endpoints
 @router.get("/registrations", response_model=List[EventRegistrationResponse])
 async def get_admin_registrations(
     status: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
     current_admin: User = Depends(get_current_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """Get event registrations for admin management"""
+    """Get event registrations for admin management."""
     offset = (page - 1) * limit
     query = db.query(EventRegistration)
-    
+
     if status and status != "all":
         query = query.filter(EventRegistration.status == status)
     else:
         query = query.filter(EventRegistration.status == "pending")  # Default to pending
-    
-    registrations = query.order_by(EventRegistration.created_at.desc()).offset(offset).limit(limit).all()
-    
-    result = []
+
+    registrations = (
+        query.order_by(EventRegistration.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    result: List[EventRegistrationResponse] = []
     for registration in registrations:
         user = db.query(User).filter(User.id == registration.user_id).first()
         event = db.query(Event).filter(Event.id == registration.event_id).first()
-        result.append(EventRegistrationResponse(
-            id=registration.id,
-            event_id=registration.event_id,
-            user_id=registration.user_id,
-            user_name=user.full_name if user else "Unknown",
-            event_title=event.title if event else "Unknown",
-            category=registration.category,
-            status=registration.status,
-            rejection_reasons=registration.rejection_reasons,
-            rejection_description=registration.rejection_description,
-            created_at=registration.created_at,
-            updated_at=registration.updated_at,
-        ))
+        result.append(
+            EventRegistrationResponse(
+                id=registration.id,
+                event_id=registration.event_id,
+                user_id=registration.user_id,
+                user_name=user.full_name if user else "Unknown",
+                event_title=event.title if event else "Unknown",
+                category=registration.category,
+                status=registration.status,
+                rejection_reasons=registration.rejection_reasons,
+                rejection_description=registration.rejection_description,
+                created_at=registration.created_at,
+                updated_at=registration.updated_at,
+            )
+        )
+    return result
+
+
+@router.get(
+    "/events/{event_id}/registrations",
+    response_model=List[EventRegistrationWithPaymentResponse],
+)
+async def get_event_registrations_with_payments(
+    event_id: str,
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Get registrations for a specific event including sandbox payment amount."""
+    registrations = (
+        db.query(EventRegistration)
+        .filter(EventRegistration.event_id == event_id)
+        .order_by(EventRegistration.created_at.desc())
+        .all()
+    )
+
+    result: List[EventRegistrationWithPaymentResponse] = []
+
+    for registration in registrations:
+        user = db.query(User).filter(User.id == registration.user_id).first()
+
+        # Use first successful payment session for this user/event/category
+        payment_session = (
+            db.query(PaymentSession)
+            .filter(
+                PaymentSession.event_id == registration.event_id,
+                PaymentSession.user_id == registration.user_id,
+                PaymentSession.category == registration.category,
+                PaymentSession.status == "success",
+            )
+            .order_by(PaymentSession.created_at.desc())
+            .first()
+        )
+
+        amount = payment_session.amount if payment_session else None
+
+        result.append(
+            EventRegistrationWithPaymentResponse(
+                id=registration.id,
+                event_id=registration.event_id,
+                user_id=registration.user_id,
+                user_name=user.full_name if user else "Unknown",
+                event_title=None,
+                category=registration.category,
+                status=registration.status,
+                rejection_reasons=registration.rejection_reasons,
+                rejection_description=registration.rejection_description,
+                created_at=registration.created_at,
+                updated_at=registration.updated_at,
+                amount=amount,
+            )
+        )
+
     return result
 
 @router.put("/registrations/{registration_id}/approve")

@@ -49,6 +49,15 @@ alembic revision --autogenerate -m "Description"
 alembic upgrade head
 ```
 
+## Payment Sandbox (QR + Cross-device)
+
+For the course project, the payment step is implemented as a **sandbox** using a cross-device flow similar to Zalo/Telegram QR login:
+
+- The web app (PC) creates a `PaymentSession` via `POST /api/v1/payment/session` and shows a QR code.
+- The mobile device scans the QR and opens `/payment/confirm?session_id=...`, where the user presses "**Xác nhận thanh toán giả lập**".
+- The backend updates the `PaymentSession` status to `success`, creates an `EventRegistration`, and the PC polls `GET /api/v1/payment/session/{id}` until it sees `success`.
+- Admins can open the Admin Dashboard → tab **Sự kiện** → button **"Xem đăng ký & tổng tiền"** to see all registrations for an event and the **total sandbox amount** collected.
+
 ## Media Storage Configuration
 
 The upload pipeline now relies on two external providers:
