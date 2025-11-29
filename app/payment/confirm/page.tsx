@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getPaymentSession, confirmPaymentSession } from '@/lib/api/payment'
 
-export default function PaymentConfirmPage() {
+function PaymentConfirmContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const sessionId = searchParams.get('session_id')
@@ -167,4 +167,19 @@ export default function PaymentConfirmPage() {
   )
 }
 
+export default function PaymentConfirmPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-white px-4">
+          <div className="rounded-2xl border border-neutral-200 px-6 py-4 text-lg text-neutral-600 shadow-sm">
+            Đang tải phiên thanh toán...
+          </div>
+        </div>
+      }
+    >
+      <PaymentConfirmContent />
+    </Suspense>
+  )
+}
 
