@@ -6,8 +6,6 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import CTASection from '@/components/home/CTASection'
 import { getEvent } from '@/lib/api/events'
-import { FALLBACK_EVENT_DETAILS_MAP, type FallbackEventDetail } from '@/lib/data/fallback-events'
-import { getFallbackEventDetail } from '@/lib/data/fallback-event-details'
 import { getTicketOptions, type TicketOption } from '@/lib/data/fallbackEventTickets'
 import StepIndicator, {
   STEP_ICON_PATHS,
@@ -41,8 +39,6 @@ export default function EventRegistrationStepOnePage() {
   const params = useParams()
   const eventId = params.id as string
   const router = useRouter()
-  const fallbackMeta: FallbackEventDetail | undefined = FALLBACK_EVENT_DETAILS_MAP[eventId]
-  const fallbackDetail = useMemo(() => getFallbackEventDetail(eventId), [eventId])
   const [event, setEvent] = useState<RegistrationEventInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [ticketOptions, setTicketOptions] = useState<TicketOption[]>([])
@@ -61,7 +57,7 @@ export default function EventRegistrationStepOnePage() {
           id: eventData.id,
           title: eventData.title,
           description: eventData.description,
-          image: eventData.image_url ?? fallbackDetail.heroImage,
+          image: eventData.image_url ?? '/Image/Event.png',
           categories: eventData.categories ?? []
         }
 
@@ -73,24 +69,10 @@ export default function EventRegistrationStepOnePage() {
       } catch (error) {
         console.error('Unable to load event for registration:', error)
         if (!isSubscribed) return
-
-        if (fallbackMeta) {
-          const fallbackEvent: RegistrationEventInfo = {
-            id: fallbackMeta.id,
-            title: fallbackMeta.title,
-            description: fallbackMeta.description,
-            image: fallbackMeta.image,
-            categories: fallbackMeta.categories
-          }
-          const options = getTicketOptions(fallbackMeta.id, fallbackMeta.categories)
-          setEvent(fallbackEvent)
-          setTicketOptions(options)
-          setSelectedTicketId(options[0]?.id ?? null)
-        } else {
-          setEvent(null)
-          setTicketOptions([])
-          setSelectedTicketId(null)
-        }
+        // Show error - don't use fallback
+        setEvent(null)
+        setTicketOptions([])
+        setSelectedTicketId(null)
       } finally {
         if (isSubscribed) {
           setIsLoading(false)
@@ -103,7 +85,7 @@ export default function EventRegistrationStepOnePage() {
     return () => {
       isSubscribed = false
     }
-  }, [eventId, fallbackMeta, fallbackDetail.heroImage])
+  }, [eventId])
 
   const selectedTicket = ticketOptions.find((option) => option.id === selectedTicketId)
 
@@ -165,7 +147,7 @@ export default function EventRegistrationStepOnePage() {
     )
   }
 
-  const coverImage = event.image || fallbackDetail.heroImage
+  const coverImage = event.image || '/Image/Event.png'
 
   return (
     <>

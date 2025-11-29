@@ -7,8 +7,6 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import CTASection from '@/components/home/CTASection'
 import { getEvent } from '@/lib/api/events'
-import { FALLBACK_EVENT_DETAILS_MAP, type FallbackEventDetail } from '@/lib/data/fallback-events'
-import { getFallbackEventDetail } from '@/lib/data/fallback-event-details'
 import StepIndicator, {
   STEP_ICON_PATHS,
   type StepConfig
@@ -92,8 +90,6 @@ export default function EventRegistrationStepTwoPage() {
   const params = useParams()
   const eventId = params.id as string
   const router = useRouter()
-  const fallbackMeta: FallbackEventDetail | undefined = FALLBACK_EVENT_DETAILS_MAP[eventId]
-  const fallbackDetail = useMemo(() => getFallbackEventDetail(eventId), [eventId])
   const [event, setEvent] = useState<RegistrationEventInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [formState, setFormState] = useState<ParticipantFormState>(INITIAL_FORM_STATE)
@@ -120,22 +116,13 @@ export default function EventRegistrationStepTwoPage() {
           id: eventData.id,
           title: eventData.title,
           description: eventData.description,
-          image: eventData.image_url ?? fallbackDetail.heroImage
+          image: eventData.image_url ?? '/Image/Event.png'
         })
       } catch (error) {
         console.error('Unable to load event detail for participant form:', error)
         if (!isSubscribed) return
-
-        if (fallbackMeta) {
-          setEvent({
-            id: fallbackMeta.id,
-            title: fallbackMeta.title,
-            description: fallbackMeta.description,
-            image: fallbackMeta.image
-          })
-        } else {
-          setEvent(null)
-        }
+        // Don't use fallback - show error
+        setEvent(null)
       } finally {
         if (isSubscribed) {
           setIsLoading(false)
@@ -148,7 +135,7 @@ export default function EventRegistrationStepTwoPage() {
     return () => {
       isSubscribed = false
     }
-  }, [eventId, fallbackMeta, fallbackDetail.heroImage])
+  }, [eventId])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -164,7 +151,7 @@ export default function EventRegistrationStepTwoPage() {
     }
   }, [eventId])
 
-  const coverImage = event?.image ?? fallbackDetail.heroImage
+  const coverImage = event?.image ?? '/Image/Event.png'
 
   const handleFieldChange = (field: keyof ParticipantFormState, value: string) => {
     setFormState((prev) => ({

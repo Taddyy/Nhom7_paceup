@@ -5,8 +5,6 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import CTASection from '@/components/home/CTASection'
-import { FALLBACK_EVENT_DETAILS_MAP, type FallbackEventDetail } from '@/lib/data/fallback-events'
-import { getFallbackEventDetail, type EventDetailSection } from '@/lib/data/fallback-event-details'
 
 interface Event {
   id: string
@@ -39,8 +37,6 @@ const formatDisplayDate = (value?: string) => {
 
 export default function EventDetailPage() {
   const params = useParams()
-  const fallbackMeta: FallbackEventDetail | undefined =
-    FALLBACK_EVENT_DETAILS_MAP[params.id as string]
   const [event, setEvent] = useState<Event | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
@@ -68,35 +64,14 @@ export default function EventDetailPage() {
         })
       } catch (error) {
         console.error('Error fetching event:', error)
-        if (fallbackMeta) {
-          setEvent({
-            id: fallbackMeta.id,
-            title: fallbackMeta.title,
-            description: fallbackMeta.description,
-            fullDescription: fallbackMeta.fullDescription,
-            date: fallbackMeta.date,
-            time: fallbackMeta.time,
-            location: fallbackMeta.location,
-            address: fallbackMeta.address,
-            image: fallbackMeta.image,
-            participants: fallbackMeta.participants,
-            maxParticipants: fallbackMeta.maxParticipants,
-            registrationDeadline: fallbackMeta.registrationDeadline,
-            categories: fallbackMeta.categories
-          })
-        }
+        // Don't set fallback event, let it show error page
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchEvent()
-  }, [params.id, fallbackMeta])
-
-  const detailContent = useMemo(
-    () => getFallbackEventDetail(event?.id ?? (params.id as string)),
-    [event?.id, params.id]
-  )
+  }, [params.id])
 
   const handleStartRegistration = () => {
     if (!event || isFull) {
@@ -105,14 +80,10 @@ export default function EventDetailPage() {
     router.push(`/events/${event.id}/register`)
   }
 
-  const sectionCards = detailContent.sections ?? []
-  const summaryParagraphs =
-    detailContent.summary && detailContent.summary.length > 0
-      ? detailContent.summary
-      : (event?.fullDescription ?? '')
-          .split('\n')
-          .map((paragraph) => paragraph.trim())
-          .filter((paragraph) => paragraph.length > 0)
+  const summaryParagraphs = (event?.fullDescription ?? '')
+    .split('\n')
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0)
 
   if (isLoading) {
     return (
@@ -144,13 +115,10 @@ export default function EventDetailPage() {
   }
 
   const isFull = event.participants >= event.maxParticipants
-  const heroImage = event.image ?? detailContent.heroImage
-  const eventTimeDisplay =
-    detailContent.eventTime ??
-    [event.time, formatDisplayDate(event.date)].filter(Boolean).join(', ')
-  const startLocation = detailContent.startLocation ?? event.location
-  const finishLocation = detailContent.finishLocation ?? event.address
-  const hasSectionContent = sectionCards.length > 0
+  const heroImage = event.image ?? '/Image/Event.png'
+  const eventTimeDisplay = [event.time, formatDisplayDate(event.date)].filter(Boolean).join(', ')
+  const startLocation = event.location
+  const finishLocation = event.address
   const infoCards = [
     {
       label: 'Ngày diễn ra',
@@ -210,11 +178,6 @@ export default function EventDetailPage() {
 
           <div className="relative z-10 flex flex-col gap-8 px-6 py-12 md:px-12">
             <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.3em] text-white/70">
-              {detailContent.badges.map((badge) => (
-                <span key={badge} className="rounded-full bg-white/10 px-4 py-2">
-                  {badge}
-                </span>
-              ))}
               {event.categories.map((category) => (
                 <span key={category} className="rounded-full border border-white/30 px-4 py-2">
                   {category}
@@ -233,20 +196,19 @@ export default function EventDetailPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
-              {detailContent.stats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-[18px] border border-white/15 bg-white/10 px-5 py-4 backdrop-blur-sm"
-                >
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/70">
-                    {stat.label}
-                  </p>
-                  <p className="text-2xl font-semibold">{stat.value}</p>
-                  {stat.caption && (
-                    <p className="text-sm text-white/70">{stat.caption}</p>
-                  )}
-                </div>
-              ))}
+              <div className="rounded-[18px] border border-white/15 bg-white/10 px-5 py-4 backdrop-blur-sm">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/70">Người tham gia</p>
+                <p className="text-2xl font-semibold">{event.participants.toLocaleString('vi-VN')}</p>
+                <p className="text-sm text-white/70">/{event.maxParticipants.toLocaleString('vi-VN')}</p>
+              </div>
+              <div className="rounded-[18px] border border-white/15 bg-white/10 px-5 py-4 backdrop-blur-sm">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/70">Cự ly</p>
+                <p className="text-2xl font-semibold">{event.categories[0] || 'N/A'}</p>
+              </div>
+              <div className="rounded-[18px] border border-white/15 bg-white/10 px-5 py-4 backdrop-blur-sm">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/70">Địa điểm</p>
+                <p className="text-2xl font-semibold">{event.location}</p>
+              </div>
             </div>
 
           <div className="flex flex-wrap gap-4">
@@ -312,32 +274,20 @@ export default function EventDetailPage() {
                 <p key={index}>{paragraph}</p>
               ))}
             </div>
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {detailContent.highlights.map((highlight) => (
-                <div
-                  key={highlight}
-                  className="rounded-[18px] border border-neutral-100 bg-neutral-50 px-4 py-5"
-                >
-                  <p className="text-sm font-medium text-neutral-900">{highlight}</p>
-                </div>
-              ))}
-            </div>
           </div>
 
           <div className="rounded-[24px] border border-neutral-200 bg-white p-8 shadow-sm">
             <h3 className="text-xl font-semibold text-neutral-900">Timeline sự kiện</h3>
             <div className="mt-6 space-y-5">
-              {detailContent.schedule.map((item) => (
-                <div key={`${item.time}-${item.title}`} className="flex items-center gap-4">
-                  <div className="flex h-[48px] w-[48px] items-center justify-center rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold leading-none text-white">
-                    {item.time}
-                  </div>
-                  <div>
-                    <p className="text-base font-semibold text-neutral-900">{item.title}</p>
-                    <p className="text-sm text-neutral-600">{item.description}</p>
-                  </div>
+              <div className="flex items-center gap-4">
+                <div className="flex h-[48px] w-[48px] items-center justify-center rounded-full bg-neutral-900 px-4 py-2 text-sm font-semibold leading-none text-white">
+                  {event.time}
                 </div>
-              ))}
+                <div>
+                  <p className="text-base font-semibold text-neutral-900">Xuất phát</p>
+                  <p className="text-sm text-neutral-600">{event.location}</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -353,98 +303,22 @@ export default function EventDetailPage() {
                 <p className="text-sm text-neutral-500">Các thông số quan trọng cần lưu ý</p>
               </div>
               <span className="rounded-full bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-700">
-                {detailContent.route.distance}
+                {event.categories[0] || 'N/A'}
               </span>
             </div>
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-              <div className="rounded-[18px] border border-neutral-100 bg-neutral-50 px-4 py-5">
-                <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Độ cao</p>
-                <p className="text-xl font-semibold text-neutral-900">
-                  {detailContent.route.elevation}
-                </p>
-              </div>
-              <div className="rounded-[18px] border border-neutral-100 bg-neutral-50 px-4 py-5">
-                <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Trạm tiếp nước</p>
-                <p className="text-xl font-semibold text-neutral-900">
-                  {detailContent.route.hydrationPoints}
-                </p>
-              </div>
-              <div className="rounded-[18px] border border-neutral-100 bg-neutral-50 px-4 py-5">
-                <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Map preview</p>
-                <p className="text-xl font-semibold text-neutral-900">Tải roadbook</p>
-              </div>
-            </div>
-            <div className="relative mt-6 h-[280px] overflow-hidden rounded-[20px] border border-neutral-100">
-              <Image
-                src={detailContent.route.mapImage}
-                alt={`Route preview of ${event.title}`}
-                fill
-                className="object-cover"
-              />
+            <div className="mt-6 rounded-[20px] border border-neutral-100 bg-neutral-50 p-8 text-center">
+              <p className="text-neutral-600">Thông tin route sẽ được cập nhật sớm</p>
             </div>
           </div>
 
           <div className="rounded-[24px] border border-neutral-200 bg-white p-8 shadow-sm">
             <h3 className="text-xl font-semibold text-neutral-900">Race kit & tiện ích</h3>
-            <ul className="mt-4 space-y-3">
-              {detailContent.raceKit.map((item) => (
-                <li
-                  key={item}
-                  className="flex items-center gap-3 text-sm font-medium text-neutral-800"
-                >
-                  <span className="h-2 w-2 rounded-full bg-neutral-900" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-6 space-y-4">
-              {detailContent.amenities.map((amenity) => (
-                <div key={amenity.title} className="rounded-[18px] border border-neutral-100 p-4">
-                  <p className="text-base font-semibold text-neutral-900">{amenity.title}</p>
-                  <p className="text-sm text-neutral-600">{amenity.description}</p>
-                </div>
-              ))}
+            <div className="mt-6 rounded-[18px] border border-neutral-100 bg-neutral-50 p-6 text-center">
+              <p className="text-neutral-600">Thông tin race kit sẽ được cập nhật sớm</p>
             </div>
-            <p className="mt-4 text-sm text-neutral-500">{detailContent.organizerNote}</p>
           </div>
         </section>
 
-        {hasSectionContent && (
-          <section className="flex flex-col gap-6">
-            {sectionCards.map((section) => (
-              <DetailSectionCard key={section.id} section={section} />
-            ))}
-          </section>
-        )}
-
-        {!hasSectionContent && detailContent.gallery.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-semibold text-neutral-900">Khoảnh khắc nổi bật</h3>
-                <p className="text-sm text-neutral-500">Cập nhật từ cộng đồng runner PaceUp</p>
-              </div>
-              <span className="text-sm uppercase tracking-[0.3em] text-neutral-400">
-                #{event.title.replace(/\s+/g, '')}
-              </span>
-            </div>
-            <div className="grid gap-4 md:grid-cols-4">
-              {detailContent.gallery.map((galleryImage, index) => (
-                <div
-                  key={`${galleryImage}-${index}`}
-                  className="relative h-56 overflow-hidden rounded-[18px]"
-                >
-                  <Image
-                    src={galleryImage}
-                    alt={`Gallery ${index + 1}`}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.6fr)]">
           <div className="rounded-[24px] border border-neutral-200 bg-white p-8 shadow-sm">

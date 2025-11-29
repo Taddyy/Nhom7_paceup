@@ -12,44 +12,8 @@ import ContentHighlightsSection, {
 import CTASection from '@/components/home/CTASection'
 import type { EventCardProps } from '@/components/events/EventCard'
 import { getBlogPosts, type BlogPost } from '@/lib/api/blog-service'
-
-const registeredEvents: EventCardProps[] = [
-  {
-    id: 'registered-1',
-    title: 'Marathon Thành Phố HCM',
-    image: '/Image/Event.png',
-    date: '15 Tháng 12, 2024',
-    location: 'TP. Hồ Chí Minh',
-    participants: 5000,
-    distance: '42K',
-    status: 'open'
-  },
-  {
-    id: 'registered-2',
-    title: 'Ha Noi Midnight Run',
-    image: '/Image/Run 1.png',
-    date: '22 Tháng 12, 2024',
-    location: 'Hà Nội',
-    participants: 4200,
-    distance: '21K',
-    status: 'open'
-  },
-  {
-    id: 'registered-3',
-    title: 'Da Nang Beach Marathon',
-    image: '/Image/Run 2.png',
-    date: '18 Tháng 01, 2025',
-    location: 'Đà Nẵng',
-    participants: 3600,
-    distance: '10K',
-    status: 'open'
-  }
-]
-
-const eventImages = ['/Image/Event.png', '/Image/Run 1.png', '/Image/Run 2.png', '/Image/Run 3.png', '/Image/Run 4.png', '/Image/Run 5.png', '/Image/Run 6.png']
-const cities = ['TP. Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng', 'Huế', 'Cần Thơ', 'Đà Lạt', 'Hải Phòng', 'Quy Nhơn', 'Vũng Tàu', 'Phú Quốc']
-const raceThemes = ['Marathon', 'Night Run', 'Heritage Run', 'Trail Challenge', 'Beach Marathon', 'City Run']
-const distances = ['5K', '10K', '15K', '21K', '32K', '42K']
+import { getJoinedEvents } from '@/lib/api/auth-service'
+import { getEvents, type Event } from '@/lib/api/events'
 
 const formatDate = (date: Date): string => {
   const day = date.getDate().toString().padStart(2, '0')
@@ -205,27 +169,22 @@ const generateArticleHighlights = (count: number): ArticleHighlight[] =>
     }
   })
 
-const generateUpcomingEvents = (count: number): EventCardProps[] => {
-  const today = new Date()
-  return Array.from({ length: count }).map((_, index) => {
-    const eventDate = new Date(today)
-    eventDate.setDate(today.getDate() + (index + 1) * 7)
-    const city = cities[index % cities.length]
-    const theme = raceThemes[index % raceThemes.length]
-    return {
-      id: `upcoming-${index + 1}`,
-      title: `${city} ${theme}`,
-      image: eventImages[index % eventImages.length],
-      date: formatDate(eventDate),
-      location: city,
-      participants: 1800 + (index % 6) * 420,
-      distance: distances[index % distances.length],
-      status: 'open'
-    }
-  })
+const mapEventToCardProps = (event: Event): EventCardProps => {
+  return {
+    id: event.id,
+    title: event.title,
+    image: event.image_url || '/Image/Event.png',
+    date: new Date(event.date).toLocaleDateString('vi-VN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }),
+    location: event.location || 'TP. Hồ Chí Minh',
+    participants: event.participants_count || 0,
+    distance: event.categories?.[0] || '42K',
+    status: (event.registration_deadline && new Date(event.registration_deadline) < new Date()) ? 'closed' : 'open'
+  }
 }
-
-const upcomingEvents = generateUpcomingEvents(12)
 
 const staticContentHighlights = generateContentHighlights(4)
 const staticArticleHighlights = generateArticleHighlights(4)
@@ -257,6 +216,10 @@ export default function HomePage() {
   const [posts, setPosts] = useState<ContentHighlight[]>(staticContentHighlights)
   const [articles] = useState<ArticleHighlight[]>(staticArticleHighlights)
   const [isFetchingPosts, setIsFetchingPosts] = useState<boolean>(true)
+  const [registeredEvents, setRegisteredEvents] = useState<EventCardProps[]>([])
+  const [upcomingEvents, setUpcomingEvents] = useState<EventCardProps[]>([])
+  const [isLoadingRegistered, setIsLoadingRegistered] = useState(true)
+  const [isLoadingUpcoming, setIsLoadingUpcoming] = useState(true)
 
   useEffect(() => {
     const fetchApprovedBlogs = async () => {
@@ -268,13 +231,56 @@ export default function HomePage() {
         }
       } catch (error) {
         console.error('Failed to load blog posts for home:', error)
-        setPosts(staticContentHighlights)
+        // Keep static content on error
       } finally {
         setIsFetchingPosts(false)
       }
     }
 
     fetchApprovedBlogs()
+  }, [])
+
+  useEffect(() => {
+    const fetchRegisteredEvents = async () => {
+      try {
+        setIsLoadingRegistered(true)
+        const events = await getJoinedEvents()
+        setRegisteredEvents(events.map(mapEventToCardProps))
+      } catch (error) {
+        console.error('Failed to load registered events:', error)
+        // Show empty state - user might not be logged in or have no registrations
+        setRegisteredEvents([])
+      } finally {
+        setIsLoadingRegistered(false)
+      }
+    }
+
+    fetchRegisteredEvents()
+  }, [])
+
+  useEffect(() => {
+    const fetchUpcomingEvents = async () => {
+      try {
+        setIsLoadingUpcoming(true)
+        const response = await getEvents(1, 12)
+        // Filter for upcoming events (date >= today)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const upcoming = response.events.filter(event => {
+          const eventDate = new Date(event.date)
+          eventDate.setHours(0, 0, 0, 0)
+          return eventDate >= today
+        }).slice(0, 12)
+        setUpcomingEvents(upcoming.map(mapEventToCardProps))
+      } catch (error) {
+        console.error('Failed to load upcoming events:', error)
+        setUpcomingEvents([])
+      } finally {
+        setIsLoadingUpcoming(false)
+      }
+    }
+
+    fetchUpcomingEvents()
   }, [])
 
   return (
@@ -285,8 +291,12 @@ export default function HomePage() {
       <div className="w-full max-w-[1440px] relative">
         <HeroSection />
       </div>
-      <RegisteredEventsSection events={registeredEvents} />
-      <UpcomingEventsSection events={upcomingEvents} />
+      {!isLoadingRegistered && (
+        <RegisteredEventsSection events={registeredEvents} />
+      )}
+      {!isLoadingUpcoming && (
+        <UpcomingEventsSection events={upcomingEvents} />
+      )}
       <ContentHighlightsSection
         posts={posts}
         articles={articles}

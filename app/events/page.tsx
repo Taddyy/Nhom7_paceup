@@ -6,7 +6,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import EventCard from '@/components/events/EventCard'
 import CTASection from '@/components/home/CTASection'
-import { FALLBACK_EVENT_LIST } from '@/lib/data/fallback-events'
 
 type EventItem = {
   id: string
@@ -103,17 +102,12 @@ function EventsPageInner() {
           status: (event.status === 'closed' ? 'closed' : 'open') as 'open' | 'closed',
         }))
 
-        if (mappedEvents.length === 0) {
-          setEvents(FALLBACK_EVENT_LIST)
-          setTotal(FALLBACK_EVENT_LIST.length)
-        } else {
-          setEvents(mappedEvents)
-          setTotal(response.total)
-        }
+        setEvents(mappedEvents)
+        setTotal(response.total)
       } catch (error) {
         console.error('Error fetching events:', error)
-        setEvents(FALLBACK_EVENT_LIST)
-        setTotal(FALLBACK_EVENT_LIST.length)
+        setEvents([])
+        setTotal(0)
       } finally {
         setIsLoading(false)
       }
